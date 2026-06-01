@@ -1,0 +1,59 @@
+
+services:
+  frontend-vue:
+    build: 
+      context: ./cliente
+    container_name: vue_diagnoses_ui
+    ports:
+      - "3000:3000"
+    networks:
+      - rede_streaming
+
+  nginx-cdn:
+    image: nginx:alpine
+    container_name: nginx_edge_cdn
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - nginx_cache:/tmp/nginx_cache 
+    depends_on:
+      - backend-go-1
+      - backend-go-2
+    networks:
+      - rede_streaming
+
+  # ==========================================
+  # ORIGEM 1
+  # ==========================================
+  backend-go-1:
+    build: 
+      context: ./back-end-go # Usa a mesma pasta de código!
+    container_name: go_origin_1
+    ports:
+      - "8081:8080" # Acessível externamente pela 8081
+    volumes:
+      - ./meus_videos_gerados:/app/videos 
+    networks:
+      - rede_streaming
+
+  # ==========================================
+  # ORIGEM 2 (O Clone)
+  # ==========================================
+  backend-go-2:
+    build: 
+      context: ./back-end-go # Usa a mesma pasta de código!
+    container_name: go_origin_2
+    ports:
+      - "8082:8080" # Acessível externamente pela 8082
+    volumes:
+      - ./meus_videos_gerados:/app/videos 
+    networks:
+      - rede_streaming
+
+networks:
+  rede_streaming:
+    driver: bridge
+
+volumes:
+  nginx_cache:
