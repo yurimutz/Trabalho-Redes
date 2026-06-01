@@ -42,7 +42,7 @@ services:
   # ==========================================
   backend-go-2:
     build: 
-      context: ./back-end-go # Usa a mesma pasta de código!
+      context: ./back-end-go2 # Usa a mesma pasta de código!
     container_name: go_origin_2
     ports:
       - "8082:8080" # Acessível externamente pela 8082
