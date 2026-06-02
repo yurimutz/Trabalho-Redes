@@ -3,10 +3,29 @@ package main
 import (
 	"log"
 	"net/http"
+	"path/filepath"
+	"strings"
 )
 
 func main() {
 	// fmt.Println("Hello, World!")
+
+	pastaVideos := "/app/videos"
+
+	http.HandleFunc("/videos/", func(w http.ResponseWriter, r *http.Request) {
+		// if(r.Method != "GET"){
+		// }
+
+		nomeArquivo := strings.TrimPrefix(r.URL.Path, "/videos/")
+		caminhoFisico := filepath.Join(pastaVideos, nomeArquivo)
+		http.ServeFile(w, r, caminhoFisico)
+
+		// Teste de retornos
+		//io.WriteString(w, "Hello from a HandleFunc #2 %s!\n", r.URL)
+		// fmt.Fprintf(w, "Hello from a HandleFunc #2 %s!\n", r.URL)
+
+	})
+
 	log.Println("Servidor de Origem pronto e escutando na porta 8082...")
-	log.Fatal(http.ListenAndServe(":8082", nil))
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
