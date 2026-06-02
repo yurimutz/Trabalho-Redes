@@ -6,6 +6,9 @@ services:
     container_name: vue_client_ui
     ports:
       - "3000:3000"
+    volumes:
+      - ./cliente:/app
+      - /app/node_modules
     networks:
       - rede_streaming
 
