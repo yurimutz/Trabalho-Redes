@@ -12,18 +12,26 @@ func main() {
 
 	pastaVideos := "/app/videos"
 
-	http.HandleFunc("/videos/", func(w http.ResponseWriter, r *http.Request) {
-		// if(r.Method != "GET"){
-		// }
+	// http.HandleFunc("/teste/", func(w http.ResponseWriter, r *http.Request) {
+	// 	if(r.Method != "GET"){
+	// 	}
+	// 	//Teste de retornos
+	// 	io.WriteString(w, "Hello from a HandleFunc #2 %s!\n", r.URL)
+	// 	fmt.Fprintf(w, "Hello from a HandleFunc #2 %s!\n", r.URL)
+	// })
 
+	http.HandleFunc("/videos/", func(w http.ResponseWriter, r *http.Request) {
 		nomeArquivo := strings.TrimPrefix(r.URL.Path, "/videos/")
 		caminhoFisico := filepath.Join(pastaVideos, nomeArquivo)
 		http.ServeFile(w, r, caminhoFisico)
 
-		// Teste de retornos
-		//io.WriteString(w, "Hello from a HandleFunc #2 %s!\n", r.URL)
-		// fmt.Fprintf(w, "Hello from a HandleFunc #2 %s!\n", r.URL)
+	})
 
+	http.HandleFunc("/manifesto/", func(w http.ResponseWriter, r *http.Request) {
+		//fmt.Fprintf(w, "Hello from a HandleFunc #2 %s!\n", r.URL)
+		nomeArquivo := strings.TrimPrefix(r.URL.Path, "/manifesto/")
+		caminhoFisico := filepath.Join(pastaVideos, nomeArquivo)
+		http.ServeFile(w, r, caminhoFisico)
 	})
 
 	log.Println("Servidor de Origem pronto e escutando na porta 8082...")
