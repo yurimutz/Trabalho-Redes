@@ -33,7 +33,7 @@ services:
     ports:
       - "8081:8080" # Acessível externamente pela 8081
     volumes:
-      - ./meus_videos_gerados:/app/videos 
+      - ./back-end-go/meus_videos_gerados:/app/videos 
     networks:
       - rede_streaming
 
@@ -47,7 +47,7 @@ services:
     ports:
       - "8082:8080" # Acessível externamente pela 8082
     volumes:
-      - ./meus_videos_gerados:/app/videos 
+      - ./back-end-go2/meus_videos_gerados:/app/videos 
     networks:
       - rede_streaming
 
