@@ -1,6 +1,55 @@
 <script setup>
-import HelloWorld from './components/HelloWorld.vue'
-import TheWelcome from './components/TheWelcome.vue'
+  import { ref, onMounted, onBeforeUpdate } from 'vue'
+
+  import HelloWorld from './components/HelloWorld.vue'
+  import TheWelcome from './components/TheWelcome.vue'
+
+  const url = "http://localhost:8080/manifesto/manifesto.mpd";
+
+  async function buscarManifesto() {
+    try {
+
+      // --------------------------------------------------------------------
+      // Teste do fecth do manifesto
+      const response = await fetch(url); 
+      if (!response.ok) {
+        throw new Error(`Erro HTTP: ${response.status}`);
+      }
+ 
+      const result = await response.text();
+      //console.log(result);
+
+      const parser = new DOMParser();
+      const manifest = parser.parseFromString(result, "application/xml");
+
+      //Pega <> do manifesto
+      const segmento = manifest.querySelector("SegmentTemplate");
+      console.log(segmento);
+      // const segmentoAll = manifest.querySelectorAll("SegmentTemplate");
+      // console.log(segmentoAll);
+
+      // Extrai informcoes do <>
+      const nomeChunk = segmento.getAttribute("media");
+      console.log(nomeChunk);
+
+      // ---------------------------------------------------------------------
+      // Teste do fetch dos chunks
+      const chunk = await fetch("http://localhost:8080/videos/chunk_2_1.m4s");
+      if(chunk.ok){
+        console.log("Busquei o pedaco");
+      } else {
+        console.log("Nao deu certo")
+      }
+
+    } catch (error) {
+      console.error("Falha ao buscar o manifesto:", error.message);
+    }
+}
+
+  onMounted(() => {
+    buscarManifesto();
+  })
+
 </script>
 
 <template>
