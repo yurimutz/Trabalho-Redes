@@ -89,7 +89,7 @@ async function iniciarStreaming() {
       // Promisse para baixar os dois ao mesmo tempo
       await Promise.all([
         fetchAndAppend(videosBaseUrl + videoInitUrl, videoBuffer),
-        fetchAndAppend(audioInitUrl + audioInitUrl, audioBuffer)
+        fetchAndAppend(videosBaseUrl + audioInitUrl, audioBuffer)
       ]);
 
       // 6. O famoso Loop de Chunks (Exemplo: buscando os 5 primeiros pedaços)
@@ -109,12 +109,12 @@ async function iniciarStreaming() {
         console.log(`Baixando pedaço ${i}...`);
         
         // O "await" aqui é crucial. Ele garante que não vamos atropelar o buffer.
-        await fetchAndAppend(videosBaseUrl + videoChunkUrl, videoBuffer);
+        // await fetchAndAppend(videosBaseUrl + videoChunkUrl, videoBuffer);
 
-        // await Promise.all([
-        //   fetchAndAppend(videosBaseUrl + videoChunkUrl, videoBuffer),
-        //   fetchAndAppend(audioInitUrl + audioChunkUrl, audioBuffer)
-        // ]);
+        await Promise.all([
+          fetchAndAppend(videosBaseUrl + videoChunkUrl, videoBuffer),
+          fetchAndAppend(audioInitUrl + audioChunkUrl, audioBuffer)
+        ]);
         
         console.log(`Pedaço ${i} injetado! (Video + Audio)`);
       }
