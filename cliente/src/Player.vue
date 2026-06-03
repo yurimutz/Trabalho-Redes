@@ -113,7 +113,7 @@ async function iniciarStreaming() {
 
         await Promise.all([
           fetchAndAppend(videosBaseUrl + videoChunkUrl, videoBuffer),
-          fetchAndAppend(audioInitUrl + audioChunkUrl, audioBuffer)
+          fetchAndAppend(videosBaseUrl + audioChunkUrl, audioBuffer)
         ]);
         
         console.log(`Pedaço ${i} injetado! (Video + Audio)`);
