@@ -22,57 +22,104 @@ async function iniciarStreaming() {
       const parser = new DOMParser();
       const manifest = parser.parseFromString(xmlText, "application/xml");
 
-      // 3. Extrai as informações vitais do XML
-      const representation = manifest.querySelector("Representation");
-      const mimeType = representation.getAttribute("mimeType"); // ex: video/mp4
-      const codecs = representation.getAttribute("codecs");     // ex: avc1.64001e
-      const repId = representation.getAttribute("id");          // ex: 2
+      // Extraindo informações de vídeo
+      const videoSet = manifest.querySelector('AdaptationSet[contentType="video"]');
+      // console.log(videoSet);
+      const videoRepresentation = videoSet.querySelector("Representation");
+      const videoMimeType = videoRepresentation.getAttribute("mimeType"); // ex: video/mp4
+      const videoCodecs = videoRepresentation.getAttribute("codecs");     // ex: avc1.64001e
+      const videoRepId = videoRepresentation.getAttribute("id");          // ex: 2
 
-      const segmento = manifest.querySelector("SegmentTemplate");
-      const initTemplate = segmento.getAttribute("initialization"); // ex: init_$RepresentationID$.mp4
-      const mediaTemplate = segmento.getAttribute("media");         // ex: chunk_$RepresentationID$_$Number$.m4s
+      const videoSegment = manifest.querySelector("SegmentTemplate");
+      const videoInitTemplate = videoSegment.getAttribute("initialization"); // ex: init_$RepresentationID$.mp4
+      const videoMediaTemplate = videoSegment.getAttribute("media");         // ex: chunk_$RepresentationID$_$Number$.m4s
 
-      // 4. Cria o SourceBuffer no formato correto
-      const codecString = `${mimeType}; codecs="${codecs}"`;
-      const sourceBuffer = mediaSource.addSourceBuffer(codecString);
+      const segmentTimeline = manifest.querySelector("SegmentTimeline");
+      const sTags = segmentTimeline.querySelectorAll("S");
+      let quantidadeDeChunks = 0;
+
+      // Extraindo informações do áudio
+      const audioSet = manifest.querySelector('AdaptationSet[contentType="audio"]');
+      const audioRep = audioSet.querySelector("Representation");
+      const audioMimeType = audioRep.getAttribute("mimeType"); 
+      const audioCodecs = audioRep.getAttribute("codecs");     
+      const audioRepId = audioRep.getAttribute("id");          
+
+      const audioSegment = audioSet.querySelector("SegmentTemplate");
+      const audioInitTemplate = audioSegment.getAttribute("initialization"); 
+      const audioMediaTemplate = audioSegment.getAttribute("media");
+
+      
+      // Calculando a quantidade de chunks
+      sTags.forEach(sTag => {
+        const repeatAttr = sTag.getAttribute("r");
+
+        // Quantidade de repeats do chunk
+        const repeats = repeatAttr ? parseInt(repeatAttr) : 0;
+
+        quantidadeDeChunks += (1 + repeats);
+      })
+      console.log("Total de chunks: ", quantidadeDeChunks);
+
+
+      // Criando os buffers
+      const videoBuffer = mediaSource.addSourceBuffer(`${videoMimeType}; codecs="${videoCodecs}"`);
+      const audioBuffer = mediaSource.addSourceBuffer(`${audioMimeType}; codecs="${audioCodecs}"`);
 
       // Função Mágica: Baixa um pedaço em formato binário e espera o buffer engolir
-      const fetchAndAppend = async (url) => {
+      const fetchAndAppend = async (url, targetBuffer) => {
         const res = await fetch(url);
         const buffer = await res.arrayBuffer(); // Pega o binário (ArrayBuffer)
 
         return new Promise((resolve) => {
           // Só resolve a promessa quando o buffer gritar "terminei de atualizar!"
-          sourceBuffer.addEventListener('updateend', resolve, { once: true });
-          sourceBuffer.appendBuffer(buffer);
+          targetBuffer.addEventListener('updateend', resolve, { once: true });
+          targetBuffer.appendBuffer(buffer);
         });
       };
 
       // 5. Baixa e Injeta o Cabeçalho (Init) - Obrigatório antes dos chunks!
       // Substitui a variavel $RepresentationID$ pelo ID real
-      const initFinalUrl = initTemplate.replace('$RepresentationID$', repId);
-      console.log("Baixando Init:", initFinalUrl);
-      await fetchAndAppend(videosBaseUrl + initFinalUrl);
+      const videoInitUrl = videoInitTemplate.replace('$RepresentationID$', videoRepId);
+      const audioInitUrl = audioInitTemplate.replace('$RepresentationID$', audioRepId);
+
+
+      console.log("Baixando inits...");
+
+      // Promisse para baixar os dois ao mesmo tempo
+      await Promise.all([
+        fetchAndAppend(videosBaseUrl + videoInitUrl, videoBuffer),
+        fetchAndAppend(audioInitUrl + audioInitUrl, audioBuffer)
+      ]);
 
       // 6. O famoso Loop de Chunks (Exemplo: buscando os 5 primeiros pedaços)
-      const quantidadeDeChunks = 4; 
       
       for (let i = 1; i <= quantidadeDeChunks; i++) {
         // Monta o nome do arquivo substituindo as variaveis dinâmicas do XML
         // Dependendo de como você gerou no FFmpeg, o $Number$ pode ser $Number%05d$ (com zeros). 
         // Adapte o replace abaixo se necessário.
-        let chunkFinalUrl = mediaTemplate
-                              .replace('$RepresentationID$', repId)
+        let videoChunkUrl = videoMediaTemplate
+                              .replace('$RepresentationID$', videoRepId)
+                              .replace('$Number$', i);
+
+        let audioChunkUrl = audioMediaTemplate
+                              .replace('$RepresentationID$', audioRepId)
                               .replace('$Number$', i);
 
         console.log(`Baixando pedaço ${i}...`);
         
         // O "await" aqui é crucial. Ele garante que não vamos atropelar o buffer.
-        await fetchAndAppend(videosBaseUrl + chunkFinalUrl);
+        await fetchAndAppend(videosBaseUrl + videoChunkUrl, videoBuffer);
+
+        // await Promise.all([
+        //   fetchAndAppend(videosBaseUrl + videoChunkUrl, videoBuffer),
+        //   fetchAndAppend(audioInitUrl + audioChunkUrl, audioBuffer)
+        // ]);
         
-        console.log(`Pedaço ${i} injetado! (+4 segundos de vídeo no buffer)`);
+        console.log(`Pedaço ${i} injetado! (Video + Audio)`);
       }
 
+      mediaSource.endOfStream();
       console.log("Loop finalizado. Buffer carregado com sucesso!");
     });
 
