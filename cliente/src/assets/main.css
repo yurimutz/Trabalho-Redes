@@ -156,15 +156,16 @@ body {
   }
 }
 
-@media (min-width: 1024px) {
-  body {
-    display: flex;
-    place-items: baseline;
+body {
+  display: flex;
+  /* flex-direction: column; */
+  place-items: baseline;
+  justify-content: center;
   }
 
-  #app {
-    display: grid;
-    grid-template-rows: 1fr 2fr;
-    padding: 0 2rem;
+#app {
+  display: grid;
+  grid-template-rows: 1fr 2fr;
+  padding: 0 2rem;
   }
-}
+
