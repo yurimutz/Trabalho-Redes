@@ -70,15 +70,16 @@ import HelloWorld from './components/HelloWorld.vue';
   </div> -->
   
   <header>
-    <img alt="Vue logo" class="logo" src="./assets/redeflix.svg" width="75" height="75" />
     <div class="wrapper">
+      <img alt="Vue logo" class="logo" src="./assets/redeflix.svg" width="75" height="75" />
+      <!-- <h2>Redeflix</h2> -->
       <HelloWorld msg="RedeFlix" />
     </div>
   </header>
 
-  <a href="/player" style="padding: 10px; cursor: pointer;">Ir para o Player de Vídeo</a>
-
+  
   <main>
+    <a href="/player" style="padding: 10px; cursor: pointer;">Ir para o Player de Vídeo</a>
     <!-- <TheWelcome /> -->
   </main>
 
@@ -98,7 +99,11 @@ header {
   header {
     display: flex;
     place-items: center;
-    padding-right: calc(var(--section-gap) / 2);
+    width: 1280px;
+    height: 72px;
+    /* padding-right: calc(var(--section-gap) / 2); */
+    padding-left: calc(var(--section-gap) / 2);
+    border-bottom: 1px solid var(--vt-c-divider-dark-1);
   }
 
   .logo {
@@ -109,6 +114,7 @@ header {
     display: flex;
     place-items: flex-start;
     flex-wrap: wrap;
+    justify-content: center;
   }
 }
 </style>

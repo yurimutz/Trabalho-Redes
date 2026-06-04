@@ -1,8 +1,8 @@
 @import './base.css';
 
 #app {
-  max-width: 1280px;
-  margin: 2rem auto;
+  max-width: 100%;
+  margin: 2rem 2rem;
   padding: 2rem;
   font-weight: normal;
 }
@@ -23,13 +23,14 @@ a,
 
 @media (min-width: 1024px) {
   body {
-    display: flex;
+    /* display: flex; */
     place-items: baseline;
   }
 
   #app {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 2fr;
+    row-gap: calc(var(--section-gap) / 2);
     padding: 0 2rem;
   }
 }
