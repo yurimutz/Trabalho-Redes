@@ -1,6 +1,18 @@
 <script setup>
   import { onMounted } from 'vue';
 import HelloWorld from './components/HelloWorld.vue';
+import Card from './components/ui/card/Card.vue';
+import CardContent from './components/ui/card/CardContent.vue';
+import Carousel from './components/ui/carousel/Carousel.vue';
+import CarouselContent from './components/ui/carousel/CarouselContent.vue';
+import CarouselItem from './components/ui/carousel/CarouselItem.vue';
+import CarouselNext from './components/ui/carousel/CarouselNext.vue';
+import CarouselPrevious from './components/ui/carousel/CarouselPrevious.vue';
+
+import { useColorMode } from '@vueuse/core';
+const mode = useColorMode();
+mode.value = 'auto'
+
   const url = "http://localhost:8080/manifesto/manifesto.mpd";
 
   async function buscarManifesto() {
@@ -80,7 +92,22 @@ import HelloWorld from './components/HelloWorld.vue';
   
   <main>
     <a href="/player" style="padding: 10px; cursor: pointer;">Ir para o Player de Vídeo</a>
-    <!-- <TheWelcome /> -->
+
+    <Carousel class="w-full">
+      <CarouselContent>
+        <CarouselItem v-for="i in 5" :key="i">
+        <div class="p1">
+          <Card>
+            <CardContent class="flex items-center justify-center p-6">
+              <span class="text-3xl font-semibold">{{ i }}</span>
+            </CardContent>
+          </Card>
+        </div>
+        </CarouselItem>
+      </CarouselContent>
+      <CarouselPrevious />
+      <CarouselNext />
+    </Carousel>
   </main>
 
 </template>
