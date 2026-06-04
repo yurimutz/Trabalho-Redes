@@ -3,9 +3,12 @@ services:
   frontend-vue:
     build: 
       context: ./cliente
-    container_name: vue_diagnoses_ui
+    container_name: vue_client_ui
     ports:
       - "3000:3000"
+    volumes:
+      - ./cliente:/app
+      - /app/node_modules
     networks:
       - rede_streaming
 
