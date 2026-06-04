@@ -2,52 +2,77 @@
 import { onMounted, ref } from 'vue';
 const videoPlayer = ref(null);
 
-const manifestUrl = "http://localhost:8080/manifesto/manifesto.mpd";
+let chunkAtual = 1;
+
+let manifest = null;
+let videoSet = null;
+let videoRepresentation = null;
+let videoMimeType = null; 
+let videoCodecs = null;     
+let videoRepId = null;    
+let videoSegment = null;
+let videoInitTemplate = null; 
+let videoMediaTemplate = null;   // ex: chunk_$RepresentationID$_$Number$.m4s
+let segmentTimeline = null;
+let sTags = null;
+let quantidadeDeChunks = 0;
+let audioSet = null;
+let audioRep = null;
+let audioMimeType = null; 
+let audioCodecs = null;     
+let audioRepId = null;   
+let audioSegment = null;
+let audioInitTemplate = null; 
+let audioMediaTemplate = null;
+
+
+const manifestUrl = "http://localhost:8080/manifesto/manifesto1.mpd";
 const videosBaseUrl = "http://localhost:8080/videos/"; // Ajuste conforme sua pasta de vídeos
 
-async function iniciarStreaming() {
-  try {
-    // 1. Inicia o MediaSource e vincula à tag de vídeo
-    const mediaSource = new MediaSource();
-    videoPlayer.value.src = URL.createObjectURL(mediaSource);
-
-    // Só podemos começar a injetar coisas quando o source estiver aberto
-    mediaSource.addEventListener('sourceopen', async () => {
-      
-      // 2. Busca e analisa o manifesto (O que você já tinha feito!)
+async function buscaManifesto() {
+  // 2. Busca e analisa o manifesto (O que você já tinha feito!)
       const response = await fetch(manifestUrl);
       if (!response.ok) throw new Error(`Erro HTTP: ${response.status}`);
       const xmlText = await response.text();
       
       const parser = new DOMParser();
-      const manifest = parser.parseFromString(xmlText, "application/xml");
+      manifest = parser.parseFromString(xmlText, "application/xml");
 
-      // Extraindo informações de vídeo
-      const videoSet = manifest.querySelector('AdaptationSet[contentType="video"]');
+    // // 2. Busca e analisa o manifesto (O que você já tinha feito!)
+      // const response = await fetch(manifestUrl);
+      // if (!response.ok) throw new Error(`Erro HTTP: ${response.status}`);
+      // const xmlText = await response.text();
+      
+      // const parser = new DOMParser();
+      // const manifest = parser.parseFromString(xmlText, "application/xml");
+}
+
+async function extraiInformacoesManifesto(){
+  // Extraindo informações de vídeo
+      videoSet = manifest.querySelector('AdaptationSet[contentType="video"]');
       // console.log(videoSet);
-      const videoRepresentation = videoSet.querySelector("Representation");
-      const videoMimeType = videoRepresentation.getAttribute("mimeType"); // ex: video/mp4
-      const videoCodecs = videoRepresentation.getAttribute("codecs");     // ex: avc1.64001e
-      const videoRepId = videoRepresentation.getAttribute("id");          // ex: 2
+      videoRepresentation = videoSet.querySelector("Representation");
+      videoMimeType = videoRepresentation.getAttribute("mimeType"); // ex: video/mp4
+      videoCodecs = videoRepresentation.getAttribute("codecs");     // ex: avc1.64001e
+      videoRepId = videoRepresentation.getAttribute("id");          // ex: 2
 
-      const videoSegment = manifest.querySelector("SegmentTemplate");
-      const videoInitTemplate = videoSegment.getAttribute("initialization"); // ex: init_$RepresentationID$.mp4
-      const videoMediaTemplate = videoSegment.getAttribute("media");         // ex: chunk_$RepresentationID$_$Number$.m4s
+      videoSegment = manifest.querySelector("SegmentTemplate");
+      videoInitTemplate = videoSegment.getAttribute("initialization"); // ex: init_$RepresentationID$.mp4
+      videoMediaTemplate = videoSegment.getAttribute("media");         // ex: chunk_$RepresentationID$_$Number$.m4s
 
-      const segmentTimeline = manifest.querySelector("SegmentTimeline");
-      const sTags = segmentTimeline.querySelectorAll("S");
-      let quantidadeDeChunks = 0;
+      segmentTimeline = manifest.querySelector("SegmentTimeline");
+      sTags = segmentTimeline.querySelectorAll("S");
 
       // Extraindo informações do áudio
-      const audioSet = manifest.querySelector('AdaptationSet[contentType="audio"]');
-      const audioRep = audioSet.querySelector("Representation");
-      const audioMimeType = audioRep.getAttribute("mimeType"); 
-      const audioCodecs = audioRep.getAttribute("codecs");     
-      const audioRepId = audioRep.getAttribute("id");          
+      audioSet = manifest.querySelector('AdaptationSet[contentType="audio"]');
+      audioRep = audioSet.querySelector("Representation");
+      audioMimeType = audioRep.getAttribute("mimeType"); 
+      audioCodecs = audioRep.getAttribute("codecs");     
+      audioRepId = audioRep.getAttribute("id");          
 
-      const audioSegment = audioSet.querySelector("SegmentTemplate");
-      const audioInitTemplate = audioSegment.getAttribute("initialization"); 
-      const audioMediaTemplate = audioSegment.getAttribute("media");
+      audioSegment = audioSet.querySelector("SegmentTemplate");
+      audioInitTemplate = audioSegment.getAttribute("initialization"); 
+      audioMediaTemplate = audioSegment.getAttribute("media");
 
       
       // Calculando a quantidade de chunks
@@ -60,7 +85,72 @@ async function iniciarStreaming() {
         quantidadeDeChunks += (1 + repeats);
       })
       console.log("Total de chunks: ", quantidadeDeChunks);
+}
 
+async function baixarECalcularBanda(url) {
+  // 1. Inicia o cronômetro de alta precisão
+  const inicio = performance.now();
+
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`Erro HTTP: ${response.status}`);
+
+  // Transforma a resposta em binário puro
+  const dadosBinarios = await response.arrayBuffer();
+
+  // 2. Para o cronômetro
+  const fim = performance.now();
+  const tempoEmMilissegundos = fim - inicio;
+
+  // 3. A Matemática da Rede
+  const bytes = dadosBinarios.byteLength;
+  const bits = bytes * 8;
+  
+  // Fórmula: (bits / tempo_em_segundos) = bps
+  // Dividimos por 1000 para transformar em Kbps
+  const tempoEmSegundos = tempoEmMilissegundos / 1000;
+  const bandaKbps = (bits / tempoEmSegundos) / 1000;
+
+  return {
+    dados: dadosBinarios,
+    kbps: bandaKbps
+  };
+}
+
+async function injetarComSeguranca(bufferDoCanal, dados) {
+  return new Promise((resolve, reject) => {
+    // Se o cano estiver ocupado, rejeitamos para não quebrar o navegador
+    if (bufferDoCanal.updating) {
+      reject(new Error("O buffer está ocupado processando outro pedaço."));
+      return;
+    }
+
+    // Cria o ouvinte que avisa quando terminou
+    const aoTerminar = () => {
+      bufferDoCanal.removeEventListener('updateend', aoTerminar);
+      resolve(); // Destrava o código!
+    };
+
+    bufferDoCanal.addEventListener('updateend', aoTerminar);
+    
+    // Injeta os dados
+    bufferDoCanal.appendBuffer(dados);
+  });
+}
+
+async function iniciarStreaming() {
+  try {
+
+    await buscaManifesto();
+    console.log("foi o manifesto");
+    await extraiInformacoesManifesto();
+    console.log("foi a extracao");
+
+    // 1. Inicia o MediaSource e vincula à tag de vídeo
+    const mediaSource = new MediaSource();
+    videoPlayer.value.src = URL.createObjectURL(mediaSource);
+
+    // Só podemos começar a injetar coisas quando o source estiver aberto
+    mediaSource.addEventListener('sourceopen', async () => {
 
       // Criando os buffers
       const videoBuffer = mediaSource.addSourceBuffer(`${videoMimeType}; codecs="${videoCodecs}"`);
@@ -80,7 +170,7 @@ async function iniciarStreaming() {
 
       // 5. Baixa e Injeta o Cabeçalho (Init) - Obrigatório antes dos chunks!
       // Substitui a variavel $RepresentationID$ pelo ID real
-      const videoInitUrl = videoInitTemplate.replace('$RepresentationID$', videoRepId);
+      let videoInitUrl = videoInitTemplate.replace('$RepresentationID$', videoRepId);
       const audioInitUrl = audioInitTemplate.replace('$RepresentationID$', audioRepId);
 
 
@@ -94,7 +184,7 @@ async function iniciarStreaming() {
 
       // 6. O famoso Loop de Chunks (Exemplo: buscando os 5 primeiros pedaços)
       
-      for (let i = 1; i <= quantidadeDeChunks; i++) {
+      for (let i = chunkAtual; i <= quantidadeDeChunks; i++) {
         // Monta o nome do arquivo substituindo as variaveis dinâmicas do XML
         // Dependendo de como você gerou no FFmpeg, o $Number$ pode ser $Number%05d$ (com zeros). 
         // Adapte o replace abaixo se necessário.
@@ -111,12 +201,35 @@ async function iniciarStreaming() {
         // O "await" aqui é crucial. Ele garante que não vamos atropelar o buffer.
         // await fetchAndAppend(videosBaseUrl + videoChunkUrl, videoBuffer);
 
-        await Promise.all([
-          fetchAndAppend(videosBaseUrl + videoChunkUrl, videoBuffer),
-          fetchAndAppend(videosBaseUrl + audioChunkUrl, audioBuffer)
+        // await Promise.all([
+        //   fetchAndAppend(videosBaseUrl + videoChunkUrl, videoBuffer),
+        //   fetchAndAppend(videosBaseUrl + audioChunkUrl, audioBuffer)
+        // ]);
+
+        let [resultadoVideo, resultadoAudio] = await Promise.all([
+          baixarECalcularBanda(videosBaseUrl + videoChunkUrl),
+          baixarECalcularBanda(videosBaseUrl + audioChunkUrl)
         ]);
-        
+
+        // Exibe a banda calculada no console
+        console.log(`Banda do Vídeo: ${resultadoVideo.kbps.toFixed(2)} Kbps`);
+        console.log(`Banda do Áudio: ${resultadoAudio.kbps.toFixed(2)} Kbps`);
+
+        // Aqui está a mágica da sincronia!
+        // Nós fazemos um "await" no vídeo ANTES do áudio. 
+        // Isso garante que o áudio não atropele o vídeo e jogue aquele erro no Firefox.
+        await injetarComSeguranca(videoBuffer, resultadoVideo.dados);
+        await injetarComSeguranca(audioBuffer, resultadoAudio.dados);
+              
         console.log(`Pedaço ${i} injetado! (Video + Audio)`);
+
+        if(resultadoVideo.kbps > 30000 && i > 3 && videoRepId != 3){
+          console.log("Aumentando a qualidade")
+          videoRepId = 3;
+          videoInitUrl = videoInitTemplate.replace('$RepresentationID$', videoRepId);
+          fetchAndAppend(videosBaseUrl + videoInitUrl, videoBuffer);
+        }
+
       }
 
       mediaSource.endOfStream();
