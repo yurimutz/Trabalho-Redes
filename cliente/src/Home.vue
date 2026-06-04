@@ -8,10 +8,6 @@ import CarouselItem from './components/ui/carousel/CarouselItem.vue';
 import CarouselNext from './components/ui/carousel/CarouselNext.vue';
 import CarouselPrevious from './components/ui/carousel/CarouselPrevious.vue';
 
-import { useColorMode } from '@vueuse/core';
-const mode = useColorMode();
-mode.value = 'auto'
-
   const url = "http://localhost:8080/manifesto/manifesto.mpd";
 
   async function buscarManifesto() {
@@ -77,9 +73,9 @@ mode.value = 'auto'
   <main>
     <a href="/player" style="padding: 10px; cursor: pointer;">Ir para o Player de Vídeo</a>
 
-    <Carousel class="w-full pt-12">
+    <Carousel class="relative w-full max-w-5xl pt-12">
       <CarouselContent>
-        <CarouselItem v-for="i in 3" :key="i" class="basis-1/3">
+        <CarouselItem v-for="i in 3" :key="i" class="basis 1 sm:basis-1/3">
         <div class="p1">
           <Card>
             <CardContent class="flex items-center justify-center p-6">
