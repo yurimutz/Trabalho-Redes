@@ -1,6 +1,5 @@
 <script setup>
   import { onMounted } from 'vue';
-import HelloWorld from './components/HelloWorld.vue';
 import Card from './components/ui/card/Card.vue';
 import CardContent from './components/ui/card/CardContent.vue';
 import Carousel from './components/ui/carousel/Carousel.vue';
@@ -62,30 +61,15 @@ mode.value = 'auto'
 </script>
 
 <template>
-  <!-- <header>
-    <img alt="Vue logo" class="logo" src="./assets/logo.svg" width="125" height="125" />
-    <div class="wrapper">
-      <HelloWorld msg="You did it!" />
-    </div>
-  </header>
-  <RouterLink to="/player/">Go to player</RouterLink>
-  <main>
-    <TheWelcome />
-  </main> -->
-    <!-- <div style="padding: 20px;">
-    <h2>Redes - Tela Inicial</h2>
-    <p>Se você está lendo isso, a tela deixou de ser invisível!</p>
-    
-    <RouterLink to="/player">
-      <button style="padding: 10px; cursor: pointer;">Ir para o Player</button>
-    </RouterLink>
-  </div> -->
   
   <header>
     <div class="wrapper">
-      <img alt="Vue logo" class="logo" src="./assets/redeflix.svg" width="75" height="75" />
-      <!-- <h2>Redeflix</h2> -->
-      <HelloWorld msg="RedeFlix" />
+      <img alt="Vue logo" class="logo" src="./assets/redeflix.svg" width="24" height="24" />
+      <h3 
+        class="scroll-m-20 text-2xl font-semibold tracking-tight"
+        >
+        Redeflix</h3>
+      <!-- <HelloWorld msg="RedeFlix" /> -->
     </div>
   </header>
 
@@ -93,9 +77,9 @@ mode.value = 'auto'
   <main>
     <a href="/player" style="padding: 10px; cursor: pointer;">Ir para o Player de Vídeo</a>
 
-    <Carousel class="w-full">
+    <Carousel class="w-full pt-12">
       <CarouselContent>
-        <CarouselItem v-for="i in 5" :key="i">
+        <CarouselItem v-for="i in 3" :key="i" class="basis-1/3">
         <div class="p1">
           <Card>
             <CardContent class="flex items-center justify-center p-6">
@@ -122,7 +106,7 @@ header {
 
 .logo {
   display: block;
-  margin: 0 auto 2rem;
+  margin: 0;
 }
 
 @media (min-width: 1024px) {
@@ -132,16 +116,15 @@ header {
     width: 1280px;
     height: 72px;
     /* padding-right: calc(var(--section-gap) / 2); */
-    padding-left: calc(var(--section-gap) / 2);
+    /* padding-left: calc(var(--section-gap) / 2); */
   }
 
   .logo {
-    margin: 0 2rem 0 0;
+    margin: 0 1rem 0 0;
   }
 
   header .wrapper {
     display: flex;
-    place-items: flex-start;
     flex-wrap: wrap;
     justify-content: center;
   }
