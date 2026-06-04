@@ -88,6 +88,9 @@ import HelloWorld from './components/HelloWorld.vue';
 <style scoped>
 header {
   line-height: 1.5;
+  /* padding-bottom: 2rem; */
+  gap: 5px;
+  border-bottom: 1px solid var(--vt-c-divider-dark-1);
 }
 
 .logo {
@@ -103,7 +106,6 @@ header {
     height: 72px;
     /* padding-right: calc(var(--section-gap) / 2); */
     padding-left: calc(var(--section-gap) / 2);
-    border-bottom: 1px solid var(--vt-c-divider-dark-1);
   }
 
   .logo {
