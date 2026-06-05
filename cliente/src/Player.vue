@@ -37,8 +37,8 @@ let historicoBanda = [];
 let tamanhoBufferBanda = 0;
 let tamMaxBufferBanda = 5;
 
-const manifestUrl = "http://localhost:8080/manifesto/manifesto1.mpd";
-const videosBaseUrl = "http://localhost:8080/videos/"; // Ajuste conforme sua pasta de vídeos
+const manifestUrl = "http://localhost:8080/manifesto/lol/manifesto1.mpd";
+const videosBaseUrl = "http://localhost:8080/videos/lol/"; // Ajuste conforme sua pasta de vídeos
 
 async function buscaManifesto() {
   // 2. Busca e analisa o manifesto (O que você já tinha feito!)

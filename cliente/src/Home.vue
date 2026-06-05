@@ -8,51 +8,25 @@ import CarouselItem from './components/ui/carousel/CarouselItem.vue';
 import CarouselNext from './components/ui/carousel/CarouselNext.vue';
 import CarouselPrevious from './components/ui/carousel/CarouselPrevious.vue';
 
-  const url = "http://localhost:8080/manifesto/manifesto.mpd";
+  const url = "http://localhost:8080/catalogo/";
 
-  async function buscarManifesto() {
-    try {
+async function testeGet(){
 
-      // --------------------------------------------------------------------
-      // Teste do fecth do manifesto
-      const response = await fetch(url); 
-      if (!response.ok) {
-        throw new Error(`Erro HTTP: ${response.status}`);
-      }
- 
-      const result = await response.text();
-      //console.log(result);
+    try{
 
-      const parser = new DOMParser();
-      const manifest = parser.parseFromString(result, "application/xml");
-
-      //Pega <> do manifesto
-      const segmento = manifest.querySelector("SegmentTemplate");
-      console.log(segmento);
-      // const segmentoAll = manifest.querySelectorAll("SegmentTemplate");
-      // console.log(segmentoAll);
-
-      // Extrai informcoes do <>
-      const nomeChunk = segmento.getAttribute("media");
-      console.log(nomeChunk);
-
-      // ---------------------------------------------------------------------
-      // Teste do fetch dos chunks
-      const chunk = await fetch("http://localhost:8080/videos/chunk_2_2.m4s");
-      if(chunk.ok){
-        console.log("Busquei o pedaco");
-      } else {
-        console.log("Nao deu certo")
-      }
+      const teste = await fetch(url);
+      if (!teste.ok) throw new Error(`Erro HTTP: ${teste.status}`);
+      const xmlText = await teste.text();
+      console.log(xmlText);
 
     } catch (error) {
       console.error("Falha ao buscar o manifesto:", error.message);
     }
 }
 
-  // onMounted(() => {
-  //   buscarManifesto();
-  // })
+  onMounted(() => {
+    testeGet();
+  })
 
 </script>
 

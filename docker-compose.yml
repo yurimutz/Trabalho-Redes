@@ -54,6 +54,18 @@ services:
     networks:
       - rede_streaming
 
+  backend-aggregator:
+    build:
+      context: ./backend-aggregator
+    container_name: go_bff_aggregator
+    ports:
+      - "8050:8050" # Opcional: expõe a porta caso queira testar direto no navegador
+    networks:
+      - rede_streaming
+    depends_on:
+      - backend-go-1 # Garante que o agregador só sobe depois dos origens
+      - backend-go-2
+
 networks:
   rede_streaming:
     driver: bridge
