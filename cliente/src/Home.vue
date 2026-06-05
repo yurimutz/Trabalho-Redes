@@ -8,7 +8,7 @@ import CarouselItem from './components/ui/carousel/CarouselItem.vue';
 import CarouselNext from './components/ui/carousel/CarouselNext.vue';
 import CarouselPrevious from './components/ui/carousel/CarouselPrevious.vue';
 
-  const url = "http://localhost:8080/catalogo/";
+  const url = "http://localhost:8050/catalogo";
 
 async function testeGet(){
 
@@ -16,11 +16,11 @@ async function testeGet(){
 
       const teste = await fetch(url);
       if (!teste.ok) throw new Error(`Erro HTTP: ${teste.status}`);
-      const xmlText = await teste.text();
-      console.log(xmlText);
+      const dados = await teste.json();
+      console.log(dados);
 
     } catch (error) {
-      console.error("Falha ao buscar o manifesto:", error.message);
+      console.error("Falha ao buscar os dados JSON:", error.message);
     }
 }
 

@@ -23,6 +23,7 @@ services:
     depends_on:
       - backend-go-1
       - backend-go-2
+      - backend-aggregator
     networks:
       - rede_streaming
 
@@ -56,10 +57,10 @@ services:
 
   backend-aggregator:
     build:
-      context: ./backend-aggregator
+      context: ./back-end-catalogo
     container_name: go_bff_aggregator
     ports:
-      - "8050:8050" # Opcional: expõe a porta caso queira testar direto no navegador
+      - "8050:8080" # Opcional: expõe a porta caso queira testar direto no navegador
     networks:
       - rede_streaming
     depends_on:

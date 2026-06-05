@@ -112,7 +112,7 @@ func main() {
 		http.ServeFile(w, r, caminhoFisico)
 	})
 
-	http.HandleFunc("/catalogo/", ListaVideosHandler)
+	http.HandleFunc("/catalogo", ListaVideosHandler)
 
 	log.Println("Servidor de Origem pronto e escutando na porta 8082...")
 	log.Fatal(http.ListenAndServe(":8080", nil))
