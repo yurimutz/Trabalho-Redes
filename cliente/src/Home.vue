@@ -50,9 +50,9 @@ import CarouselPrevious from './components/ui/carousel/CarouselPrevious.vue';
     }
 }
 
-  onMounted(() => {
-    buscarManifesto();
-  })
+  // onMounted(() => {
+  //   buscarManifesto();
+  // })
 
 </script>
 
