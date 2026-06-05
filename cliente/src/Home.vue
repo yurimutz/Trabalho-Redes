@@ -1,7 +1,14 @@
 <script setup>
   import { onMounted } from 'vue';
-import HelloWorld from './components/HelloWorld.vue';
-  const url = "http://localhost:8080/manifesto/manifesto1.mpd";
+import Card from './components/ui/card/Card.vue';
+import CardContent from './components/ui/card/CardContent.vue';
+import Carousel from './components/ui/carousel/Carousel.vue';
+import CarouselContent from './components/ui/carousel/CarouselContent.vue';
+import CarouselItem from './components/ui/carousel/CarouselItem.vue';
+import CarouselNext from './components/ui/carousel/CarouselNext.vue';
+import CarouselPrevious from './components/ui/carousel/CarouselPrevious.vue';
+
+  const url = "http://localhost:8080/manifesto/manifesto.mpd";
 
   async function buscarManifesto() {
     try {
@@ -50,65 +57,71 @@ import HelloWorld from './components/HelloWorld.vue';
 </script>
 
 <template>
-  <!-- <header>
-    <img alt="Vue logo" class="logo" src="./assets/logo.svg" width="125" height="125" />
-    <div class="wrapper">
-      <HelloWorld msg="You did it!" />
-    </div>
-  </header>
-  <RouterLink to="/player/">Go to player</RouterLink>
-  <main>
-    <TheWelcome />
-  </main> -->
-    <!-- <div style="padding: 20px;">
-    <h2>Redes - Tela Inicial</h2>
-    <p>Se você está lendo isso, a tela deixou de ser invisível!</p>
-    
-    <RouterLink to="/player">
-      <button style="padding: 10px; cursor: pointer;">Ir para o Player</button>
-    </RouterLink>
-  </div> -->
   
-  <header>
-    <img alt="Vue logo" class="logo" src="./assets/redeflix.svg" width="75" height="75" />
-    <div class="wrapper">
-      <HelloWorld msg="RedeFlix" />
+  <header class="h-16 flex flex-wrap justify-center sm:justify-start items-center md:py-6 px-4 border-b">
+    <div class="wrapper py-5 gap-4 lg:pt-0">
+      <img alt="Vue logo" class="logo" src="./assets/redeflix.svg" width="24" height="24" />
+      <h3 
+        class="scroll-m-20 text-2xl font-semibold tracking-tight"
+        >
+        Redeflix</h3>
+      <!-- <HelloWorld msg="RedeFlix" /> -->
     </div>
   </header>
 
-  <a href="/player" style="padding: 10px; cursor: pointer;">Ir para o Player de Vídeo</a>
-
+  
   <main>
-    <!-- <TheWelcome /> -->
+    <a href="/player" style="padding: 10px; cursor: pointer;">Ir para o Player de Vídeo</a>
+
+    <Carousel 
+      class="relative w-full max-w-5xl pt-12"
+      :opts="{
+        align: 'start',
+      }"
+      >
+      <CarouselContent>
+        <CarouselItem v-for="i in 3" :key="i" class="basis 1 sm:basis-1/2 lg:basis-1/3">
+        <div class="p1">
+          <Card>
+            <CardContent class="flex items-center justify-center p-6">
+              <span class="text-3xl font-semibold">{{ i }}</span>
+            </CardContent>
+          </Card>
+        </div>
+        </CarouselItem>
+      </CarouselContent>
+      <CarouselPrevious />
+      <CarouselNext />
+    </Carousel>
   </main>
 
 </template>
 
 <style scoped>
+
 header {
+  /* display: flex;
+  place-items: center;
   line-height: 1.5;
+  padding-bottom: 2rem;
+  gap: 5px; */
 }
 
-.logo {
-  display: block;
-  margin: 0 auto 2rem;
+
+header .wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
 @media (min-width: 1024px) {
   header {
-    display: flex;
     place-items: center;
-    padding-right: calc(var(--section-gap) / 2);
+    width: 1280px;
+    height: 72px;
+    /* padding-right: calc(var(--section-gap) / 2); */
+    /* padding-left: calc(var(--section-gap) / 2); */
   }
 
-  .logo {
-    margin: 0 2rem 0 0;
-  }
-
-  header .wrapper {
-    display: flex;
-    place-items: flex-start;
-    flex-wrap: wrap;
-  }
 }
 </style>
