@@ -265,8 +265,8 @@ async function iniciarStreaming() {
 
       // 6. O famoso Loop de Chunks (Exemplo: buscando os 5 primeiros pedaços)
       
-      // for (let i = 1; i <= quantidadeDeChunks; i++, chunkAtual++) {
-      while(chunkAtual <= quantidadeDeChunks){
+      for (let i = 1; i <= quantidadeDeChunks; i++, chunkAtual++) {
+      // while(chunkAtual <= quantidadeDeChunks){
         let i = chunkAtual;
         // Monta o nome do arquivo substituindo as variaveis dinâmicas do XML
         // Dependendo de como você gerou no FFmpeg, o $Number$ pode ser $Number%05d$ (com zeros). 
