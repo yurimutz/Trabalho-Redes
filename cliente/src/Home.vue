@@ -1,31 +1,30 @@
 <script setup>
-  import { onMounted } from 'vue';
-import Card from './components/ui/card/Card.vue';
-import CardContent from './components/ui/card/CardContent.vue';
+  import { onMounted, ref } from 'vue';
 import Carousel from './components/ui/carousel/Carousel.vue';
 import CarouselContent from './components/ui/carousel/CarouselContent.vue';
 import CarouselItem from './components/ui/carousel/CarouselItem.vue';
 import CarouselNext from './components/ui/carousel/CarouselNext.vue';
 import CarouselPrevious from './components/ui/carousel/CarouselPrevious.vue';
 
-  const url = "http://localhost:8050/catalogo";
+  const urlCatalogo = "http://localhost:8050/catalogo";
+  const urlVideos = "http://localhost:8080/"
+  const videos = ref([]);
 
-async function testeGet(){
+  async function buscarCatalogo(){
 
-    try{
-
-      const teste = await fetch(url);
-      if (!teste.ok) throw new Error(`Erro HTTP: ${teste.status}`);
-      const dados = await teste.json();
+    try {
+      const response = await fetch(urlCatalogo);
+      if (!response.ok) throw new Error(`Erro HTTP: ${response.status}`);
+      const dados = await response.json();
+      videos.value = dados;
       console.log(dados);
-
     } catch (error) {
       console.error("Falha ao buscar os dados JSON:", error.message);
     }
 }
 
   onMounted(() => {
-    testeGet();
+    buscarCatalogo();
   })
 
 </script>
@@ -33,7 +32,7 @@ async function testeGet(){
 <template>
   
   <header class="h-16 flex flex-wrap justify-center sm:justify-start items-center md:py-6 px-4 border-b">
-    <div class="wrapper py-5 gap-4 lg:pt-0">
+    <div class="wrapper py-5 gap-2 lg:gap-4 lg:pt-0">
       <img alt="Vue logo" class="logo" src="./assets/redeflix.svg" width="24" height="24" />
       <h3 
         class="scroll-m-20 text-2xl font-semibold tracking-tight"
@@ -44,43 +43,52 @@ async function testeGet(){
   </header>
 
   
-  <main>
+  <main class="mt-9">
     <a href="/player" style="padding: 10px; cursor: pointer;">Ir para o Player de Vídeo</a>
 
     <Carousel 
-      class="relative w-full max-w-5xl pt-12"
+      class="relative pt-12"
       :opts="{
         align: 'start',
       }"
       >
       <CarouselContent>
-        <CarouselItem v-for="i in 3" :key="i" class="basis 1 sm:basis-1/2 lg:basis-1/3">
-        <div class="p1">
-          <Card>
-            <CardContent class="flex items-center justify-center p-6">
-              <span class="text-3xl font-semibold">{{ i }}</span>
-            </CardContent>
-          </Card>
+        <CarouselItem 
+          v-for="video in videos" 
+          :key="video.nome" 
+          class="basis 1 sm:basis-1/2 lg:basis-1/3">
+        <div class="p1 w-full flex flex-col items-center">
+          <!-- <Card> -->
+            <!-- <CardContent class="flex flex-col items-center justify-center p-0"> -->
+              <!-- <span class="text-3xl font-semibold">{{ i }}</span> -->
+              <img
+                v-if="video.thumbnail"
+                :src="`${urlVideos + video.thumbnail}`"
+                :alt="video.nome"
+                class="w-full aspect-video object-cover rounded-md"
+              />
+              <div
+                v-else
+                class="w-full aspect-video bg-muted flex items-center justify-center rounded-md"
+              >
+                <span class="text-muted-foreground text-sm">sem thumbnail</span>
+              </div>
+                <span class="text-sm font-medium py-2">{{ video.nome }}</span>
+            <!-- </CardContent> -->
+          <!-- </Card> -->
         </div>
         </CarouselItem>
       </CarouselContent>
-      <CarouselPrevious />
-      <CarouselNext />
+      <CarouselPrevious
+        v-if="videos.length > 3"/>
+      <CarouselNext 
+        v-if="videos.length > 3"/>
     </Carousel>
   </main>
 
 </template>
 
 <style scoped>
-
-header {
-  /* display: flex;
-  place-items: center;
-  line-height: 1.5;
-  padding-bottom: 2rem;
-  gap: 5px; */
-}
-
 
 header .wrapper {
   display: flex;
@@ -91,7 +99,7 @@ header .wrapper {
 @media (min-width: 1024px) {
   header {
     place-items: center;
-    width: 1280px;
+    width: 100%;
     height: 72px;
     /* padding-right: calc(var(--section-gap) / 2); */
     /* padding-left: calc(var(--section-gap) / 2); */

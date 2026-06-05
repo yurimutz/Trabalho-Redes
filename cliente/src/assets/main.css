@@ -160,12 +160,13 @@ body {
   display: flex;
   /* flex-direction: column; */
   place-items: baseline;
-  justify-content: center;
+  /* justify-content: center; */
   }
 
 #app {
+  width: 100%;
   display: grid;
-  grid-template-rows: 1fr 2fr;
+  grid-template-rows: auto 2fr;
   padding: 0 2rem;
   }
 
