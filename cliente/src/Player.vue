@@ -20,6 +20,7 @@ let quantidadeDeChunks = 0;
 let tamanhoVideoTotal = null;
 let qualidades = [];
 let totalQualidades = 0;
+let tamanhoSegmentos = null;
 
 // Audio config
 let audioSet = null;
@@ -66,7 +67,8 @@ function traduzDuracaoParaSegundos(string) {
   const minutos = parseFloat(matches[2] || 0);
   const segundos = parseFloat(matches[3] || 0);
   
-  tamanhoVideoTotal = (horas * 3600) + (minutos * 60) + segundos;
+  // tamanhoVideoTotal = (horas * 3600) + (minutos * 60) + segundos;
+  return (horas * 3600) + (minutos * 60) + segundos;
 }
 
 async function extraiInformacoesManifesto(){
@@ -127,9 +129,40 @@ async function extraiInformacoesManifesto(){
       const mpd = manifest.querySelector('MPD');
       let aux = mpd.getAttribute("mediaPresentationDuration");
       console.log(aux);
-      traduzDuracaoParaSegundos(aux);
-      console.log(tamanhoVideoTotal);
+      tamanhoVideoTotal = traduzDuracaoParaSegundos(aux);
+      console.log("Tamanho total do video em segundos: " + tamanhoVideoTotal);
 
+      
+      let aux2 = mpd.getAttribute("maxSegmentDuration");
+      console.log(aux2);
+      tamanhoSegmentos = traduzDuracaoParaSegundos(aux2);
+      console.log("Tamanho de cada segmento: " + tamanhoSegmentos);
+
+}
+
+function calcularChunksNoBuffer(videoBuffer) {
+  // 1. Verifica se existe pelo menos um bloco de vídeo na memória
+  if (videoBuffer.buffered.length > 0) {
+    
+    // 2. Pega o tempo inicial e final do bloco atual (índice 0)
+    const tempoInicio = videoBuffer.buffered.start(0);
+    const tempoFim = videoBuffer.buffered.end(0);
+    
+    // 3. Calcula quantos segundos estão salvos
+    const tempoTotalEstocado = tempoFim - tempoInicio;
+    
+    // 4. Divide pelo tamanho do chunk do FFmpeg (4 segundos)
+    const DURACAO_DO_CHUNK = tamanhoSegmentos;
+    const estimativaDeChunks = Math.floor(tempoTotalEstocado / DURACAO_DO_CHUNK);
+    
+    console.log(`Temos ${tempoTotalEstocado.toFixed(2)} segundos carregados.`);
+    console.log(`Isso equivale a aproximadamente ${estimativaDeChunks} chunks no buffer!`);
+    
+    return estimativaDeChunks;
+  } else {
+    console.log("O buffer está completamente vazio.");
+    return 0;
+  }
 }
 
 async function baixarECalcularBanda(url) {
@@ -232,7 +265,9 @@ async function iniciarStreaming() {
 
       // 6. O famoso Loop de Chunks (Exemplo: buscando os 5 primeiros pedaços)
       
-      for (let i = 1; i <= quantidadeDeChunks; i++, chunkAtual++) {
+      // for (let i = 1; i <= quantidadeDeChunks; i++, chunkAtual++) {
+      while(chunkAtual <= quantidadeDeChunks){
+        let i = chunkAtual;
         // Monta o nome do arquivo substituindo as variaveis dinâmicas do XML
         // Dependendo de como você gerou no FFmpeg, o $Number$ pode ser $Number%05d$ (com zeros). 
         // Adapte o replace abaixo se necessário.
@@ -253,6 +288,8 @@ async function iniciarStreaming() {
         //   fetchAndAppend(videosBaseUrl + videoChunkUrl, videoBuffer),
         //   fetchAndAppend(videosBaseUrl + audioChunkUrl, audioBuffer)
         // ]);
+
+        
 
         let [resultadoVideo, resultadoAudio] = await Promise.all([
           baixarECalcularBanda(videosBaseUrl + videoChunkUrl),
@@ -279,12 +316,6 @@ async function iniciarStreaming() {
           const mediaBanda = (historicoBanda[0] + historicoBanda[1] + historicoBanda[2]) / 3;
           tamanhoBufferBanda = 0;
           console.log("Media de banda atual:" + mediaBanda);
-          // if(media > 30000 && videoRepId != 3){
-          //   console.log("Aumentando a qualidade")
-          //   videoRepId = 3;
-          //   videoInitUrl = videoInitTemplate.replace('$RepresentationID$', videoRepId);
-          //   fetchAndAppend(videosBaseUrl + videoInitUrl, videoBuffer);  
-          // }
 
           for(let i = qualidades.length ; i >= 0; i--){
             //console.log("Qualidade: " + q); 
@@ -299,44 +330,7 @@ async function iniciarStreaming() {
             }
           };
 
-          // if (mediaBanda >= qualidades[3]) {
-          //   if(videoRepId != 3){
-          //     console.log("Setando qualidade 1080p")
-          //     videoRepId = 3;
-          //     videoInitUrl = videoInitTemplate.replace('$RepresentationID$', videoRepId);
-          //     fetchAndAppend(videosBaseUrl + videoInitUrl, videoBuffer);    
-          //   } 
-          // } else if (mediaBanda >= qualidades[2]) {
-          //   if(videoRepId != 2){
-          //     console.log("Setando qualidade 720p")
-          //     videoRepId = 2;
-          //     videoInitUrl = videoInitTemplate.replace('$RepresentationID$', videoRepId);
-          //     fetchAndAppend(videosBaseUrl + videoInitUrl, videoBuffer);
-          //   }
-          // } else if (mediaBanda >= qualidades[1]) {
-          //   if(videoRepId != 1){
-          //     console.log("Setando qualidade 360p")
-          //     videoRepId = 1;
-          //     videoInitUrl = videoInitTemplate.replace('$RepresentationID$', videoRepId);
-          //     fetchAndAppend(videosBaseUrl + videoInitUrl, videoBuffer);
-          //   }
-          // } else {
-          //   if(videoRepId != 0){
-          //     console.log("Setando qualidade 144p")
-          //     videoRepId = 0;
-          //     videoInitUrl = videoInitTemplate.replace('$RepresentationID$', videoRepId);
-          //     fetchAndAppend(videosBaseUrl + videoInitUrl, videoBuffer);
-          //   }
-          // }
-
         }
-
-        // if(resultadoVideo.kbps > 30000 && i > 3 && videoRepId != 3){
-        //   console.log("Aumentando a qualidade")
-        //   videoRepId = 3;
-        //   videoInitUrl = videoInitTemplate.replace('$RepresentationID$', videoRepId);
-        //   fetchAndAppend(videosBaseUrl + videoInitUrl, videoBuffer);
-        // }
 
       }
 

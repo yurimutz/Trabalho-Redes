@@ -1,7 +1,7 @@
 <script setup>
   import { onMounted } from 'vue';
 import HelloWorld from './components/HelloWorld.vue';
-  const url = "http://localhost:8080/manifesto/manifesto.mpd";
+  const url = "http://localhost:8080/manifesto/manifesto1.mpd";
 
   async function buscarManifesto() {
     try {
@@ -43,9 +43,9 @@ import HelloWorld from './components/HelloWorld.vue';
     }
 }
 
-  onMounted(() => {
-    buscarManifesto();
-  })
+  // onMounted(() => {
+  //   buscarManifesto();
+  // })
 
 </script>
 
