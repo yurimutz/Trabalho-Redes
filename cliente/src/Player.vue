@@ -140,29 +140,57 @@ async function extraiInformacoesManifesto(){
 
 }
 
-function calcularChunksNoBuffer(videoBuffer) {
-  // 1. Verifica se existe pelo menos um bloco de vídeo na memória
+function calcularChunksNoBuffer(videoElement, videoBuffer) {
   if (videoBuffer.buffered.length > 0) {
     
-    // 2. Pega o tempo inicial e final do bloco atual (índice 0)
-    const tempoInicio = videoBuffer.buffered.start(0);
-    const tempoFim = videoBuffer.buffered.end(0);
+    // 1. Pega onde o buffer termina (ex: 40 segundos)
+    // Usamos .length - 1 para pegar sempre o último bloco de tempo, caso haja buracos
+    const ultimoBloco = videoBuffer.buffered.length - 1;
+    const tempoFim = videoBuffer.buffered.end(ultimoBloco);
     
-    // 3. Calcula quantos segundos estão salvos
-    const tempoTotalEstocado = tempoFim - tempoInicio;
+    // 2. Pega onde o usuário está AGORA (ex: 20 segundos)
+    const tempoAtual = videoElement.currentTime;
     
-    // 4. Divide pelo tamanho do chunk do FFmpeg (4 segundos)
+    // 3. A MÁGICA: O estoque real é apenas o que falta tocar! (40 - 20 = 20 segundos)
+    const estoqueFuturo = tempoFim - tempoAtual;
+    
+    // 4. Divide pelo tamanho do chunk (20 / 4 = 5 chunks restantes)
     const DURACAO_DO_CHUNK = tamanhoSegmentos;
-    const estimativaDeChunks = Math.floor(tempoTotalEstocado / DURACAO_DO_CHUNK);
-    
-    console.log(`Temos ${tempoTotalEstocado.toFixed(2)} segundos carregados.`);
-    console.log(`Isso equivale a aproximadamente ${estimativaDeChunks} chunks no buffer!`);
+    const estimativaDeChunks = Math.floor(estoqueFuturo / DURACAO_DO_CHUNK);
     
     return estimativaDeChunks;
-  } else {
-    console.log("O buffer está completamente vazio.");
-    return 0;
   }
+  
+  return 0;
+}
+
+function aguardarEspacoNoBuffer(videoElement, videoBuffer, limiteChunks) {
+  return new Promise((resolve) => {
+    
+    // 1. Checagem imediata: se já tiver espaço, nem precisa criar o evento, 
+    // resolve a Promise na hora e deixa o loop seguir.
+    if (calcularChunksNoBuffer(videoElement, videoBuffer) <= limiteChunks) {
+      resolve();
+      return;
+    }
+
+    console.log("Buffer cheio! Aguardando o vídeo tocar para liberar espaço...");
+
+    // 2. A função que será chamada a cada milissegundo que o vídeo tocar
+    const checarEstoque = () => {
+      if (calcularChunksNoBuffer(videoElement, videoBuffer) <= limiteChunks) {
+        
+        // MÁGICA: Assim que o espaço é liberado, removemos o "escutador" para não gastar memória...
+        videoElement.removeEventListener('timeupdate', checarEstoque);
+        
+        // ... e resolvemos a Promise, destravando o await no loop!
+        resolve(); 
+      }
+    };
+
+    // 3. Atrela a função ao evento de tempo do player
+    videoElement.addEventListener('timeupdate', checarEstoque);
+  });
 }
 
 async function baixarECalcularBanda(url) {
@@ -265,8 +293,8 @@ async function iniciarStreaming() {
 
       // 6. O famoso Loop de Chunks (Exemplo: buscando os 5 primeiros pedaços)
       
-      for (let i = 1; i <= quantidadeDeChunks; i++, chunkAtual++) {
-      // while(chunkAtual <= quantidadeDeChunks){
+      // for (let i = 1; i <= quantidadeDeChunks; i++, chunkAtual++) {
+      while(chunkAtual <= quantidadeDeChunks){
         let i = chunkAtual;
         // Monta o nome do arquivo substituindo as variaveis dinâmicas do XML
         // Dependendo de como você gerou no FFmpeg, o $Number$ pode ser $Number%05d$ (com zeros). 
@@ -279,6 +307,8 @@ async function iniciarStreaming() {
                               .replace('$RepresentationID$', audioRepId)
                               .replace('$Number$', i);
 
+        await aguardarEspacoNoBuffer(videoPlayer.value, videoBuffer, 5);
+
         console.log(`Baixando pedaço ${i}...`);
         
         // O "await" aqui é crucial. Ele garante que não vamos atropelar o buffer.
@@ -288,8 +318,6 @@ async function iniciarStreaming() {
         //   fetchAndAppend(videosBaseUrl + videoChunkUrl, videoBuffer),
         //   fetchAndAppend(videosBaseUrl + audioChunkUrl, audioBuffer)
         // ]);
-
-        
 
         let [resultadoVideo, resultadoAudio] = await Promise.all([
           baixarECalcularBanda(videosBaseUrl + videoChunkUrl),
@@ -331,7 +359,7 @@ async function iniciarStreaming() {
           };
 
         }
-
+        chunkAtual++;
       }
 
       mediaSource.endOfStream();
