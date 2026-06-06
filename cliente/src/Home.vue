@@ -1,114 +1,109 @@
 <script setup>
-  import { onMounted } from 'vue';
-import HelloWorld from './components/HelloWorld.vue';
-  const url = "http://localhost:8080/manifesto/manifesto.mpd";
+  import { onMounted, ref } from 'vue';
+import Carousel from './components/ui/carousel/Carousel.vue';
+import CarouselContent from './components/ui/carousel/CarouselContent.vue';
+import CarouselItem from './components/ui/carousel/CarouselItem.vue';
+import CarouselNext from './components/ui/carousel/CarouselNext.vue';
+import CarouselPrevious from './components/ui/carousel/CarouselPrevious.vue';
 
-  async function buscarManifesto() {
+  const urlCatalogo = "http://localhost:8050/catalogo";
+  const urlVideos = "http://localhost:8080/"
+  const videos = ref([]);
+
+  async function buscarCatalogo(){
+
     try {
-
-      // --------------------------------------------------------------------
-      // Teste do fecth do manifesto
-      const response = await fetch(url); 
-      if (!response.ok) {
-        throw new Error(`Erro HTTP: ${response.status}`);
-      }
- 
-      const result = await response.text();
-      //console.log(result);
-
-      const parser = new DOMParser();
-      const manifest = parser.parseFromString(result, "application/xml");
-
-      //Pega <> do manifesto
-      const segmento = manifest.querySelector("SegmentTemplate");
-      console.log(segmento);
-      // const segmentoAll = manifest.querySelectorAll("SegmentTemplate");
-      // console.log(segmentoAll);
-
-      // Extrai informcoes do <>
-      const nomeChunk = segmento.getAttribute("media");
-      console.log(nomeChunk);
-
-      // ---------------------------------------------------------------------
-      // Teste do fetch dos chunks
-      const chunk = await fetch("http://localhost:8080/videos/chunk_2_2.m4s");
-      if(chunk.ok){
-        console.log("Busquei o pedaco");
-      } else {
-        console.log("Nao deu certo")
-      }
-
+      const response = await fetch(urlCatalogo);
+      if (!response.ok) throw new Error(`Erro HTTP: ${response.status}`);
+      const dados = await response.json();
+      videos.value = dados;
+      console.log(dados);
     } catch (error) {
-      console.error("Falha ao buscar o manifesto:", error.message);
+      console.error("Falha ao buscar os dados JSON:", error.message);
     }
 }
 
   onMounted(() => {
-    buscarManifesto();
+    buscarCatalogo();
   })
 
 </script>
 
 <template>
-  <!-- <header>
-    <img alt="Vue logo" class="logo" src="./assets/logo.svg" width="125" height="125" />
-    <div class="wrapper">
-      <HelloWorld msg="You did it!" />
-    </div>
-  </header>
-  <RouterLink to="/player/">Go to player</RouterLink>
-  <main>
-    <TheWelcome />
-  </main> -->
-    <!-- <div style="padding: 20px;">
-    <h2>Redes - Tela Inicial</h2>
-    <p>Se você está lendo isso, a tela deixou de ser invisível!</p>
-    
-    <RouterLink to="/player">
-      <button style="padding: 10px; cursor: pointer;">Ir para o Player</button>
-    </RouterLink>
-  </div> -->
   
-  <header>
-    <img alt="Vue logo" class="logo" src="./assets/redeflix.svg" width="75" height="75" />
-    <div class="wrapper">
-      <HelloWorld msg="RedeFlix" />
+  <header class="h-16 flex flex-wrap justify-center sm:justify-start items-center md:py-6 px-4 border-b">
+    <div class="wrapper py-5 gap-2 lg:gap-4 lg:pt-0">
+      <img alt="Vue logo" class="logo" src="./assets/redeflix.svg" width="24" height="24" />
+      <h3 
+        class="scroll-m-20 text-2xl font-semibold tracking-tight"
+        >
+        Redeflix</h3>
+      <!-- <HelloWorld msg="RedeFlix" /> -->
     </div>
   </header>
 
-  <a href="/player" style="padding: 10px; cursor: pointer;">Ir para o Player de Vídeo</a>
+  
+  <main class="mt-9">
+    <a href="/player" style="padding: 10px; cursor: pointer;">Ir para o Player de Vídeo</a>
 
-  <main>
-    <!-- <TheWelcome /> -->
+    <Carousel 
+      class="relative pt-12"
+      :opts="{
+        align: 'start',
+      }"
+      >
+      <CarouselContent>
+        <CarouselItem 
+          v-for="video in videos" 
+          :key="video.nome" 
+          class="basis 1 sm:basis-1/2 lg:basis-1/3">
+        <div class="p1 w-full flex flex-col items-center">
+          <!-- <Card> -->
+            <!-- <CardContent class="flex flex-col items-center justify-center p-0"> -->
+              <!-- <span class="text-3xl font-semibold">{{ i }}</span> -->
+              <img
+                v-if="video.thumbnail"
+                :src="`${urlVideos + video.thumbnail}`"
+                :alt="video.nome"
+                class="w-full aspect-video object-cover rounded-md"
+              />
+              <div
+                v-else
+                class="w-full aspect-video bg-muted flex items-center justify-center rounded-md"
+              >
+                <span class="text-muted-foreground text-sm">sem thumbnail</span>
+              </div>
+                <span class="text-sm font-medium py-2">{{ video.nome }}</span>
+            <!-- </CardContent> -->
+          <!-- </Card> -->
+        </div>
+        </CarouselItem>
+      </CarouselContent>
+      <CarouselPrevious
+        v-if="videos.length > 3"/>
+      <CarouselNext 
+        v-if="videos.length > 3"/>
+    </Carousel>
   </main>
 
 </template>
 
 <style scoped>
-header {
-  line-height: 1.5;
-}
 
-.logo {
-  display: block;
-  margin: 0 auto 2rem;
+header .wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
 @media (min-width: 1024px) {
   header {
-    display: flex;
     place-items: center;
-    padding-right: calc(var(--section-gap) / 2);
+    width: 100%;
+    height: 72px;
+    /* padding-right: calc(var(--section-gap) / 2); */
+    /* padding-left: calc(var(--section-gap) / 2); */
   }
 
-  .logo {
-    margin: 0 2rem 0 0;
-  }
-
-  header .wrapper {
-    display: flex;
-    place-items: flex-start;
-    flex-wrap: wrap;
-  }
 }
 </style>
