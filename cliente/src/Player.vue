@@ -164,6 +164,20 @@ function calcularChunksNoBuffer(videoElement, videoBuffer) {
   return 0;
 }
 
+function tempoJaEstaBaixado(tempoDesejado, videoBuffer) {
+  // O buffer pode ter vários "blocos" de tempo separados (TimeRanges) se o usuário pular muito
+  for (let i = 0; i < videoBuffer.buffered.length; i++) {
+    const inicio = videoBuffer.buffered.start(i);
+    const fim = videoBuffer.buffered.end(i);
+    
+    // Se o tempo desejado estiver dentro deste bloco, já temos o vídeo!
+    if (tempoDesejado >= inicio && tempoDesejado <= fim) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function aguardarEspacoNoBuffer(videoElement, videoBuffer, limiteChunks) {
   return new Promise((resolve) => {
     
@@ -179,17 +193,24 @@ function aguardarEspacoNoBuffer(videoElement, videoBuffer, limiteChunks) {
     // 2. A função que será chamada a cada milissegundo que o vídeo tocar
     const checarEstoque = () => {
       if (calcularChunksNoBuffer(videoElement, videoBuffer) <= limiteChunks) {
-        
-        // MÁGICA: Assim que o espaço é liberado, removemos o "escutador" para não gastar memória...
-        videoElement.removeEventListener('timeupdate', checarEstoque);
-        
-        // ... e resolvemos a Promise, destravando o await no loop!
-        resolve(); 
+        limparListeners();
       }
     };
 
+    const acordar = () => {
+      console.log("Seek detectado, acordando loop a força.");
+      limparListeners();
+    }
+
+    const limparListeners = () => {
+      videoElement.removeEventListener('timeupdate', checarEstoque);
+      videoElement.removeEventListener('seeking', acordar);
+      resolve(); // Destrava o seu loop while!
+    }
+
     // 3. Atrela a função ao evento de tempo do player
     videoElement.addEventListener('timeupdate', checarEstoque);
+    videoElement.addEventListener('seeking', acordar);
   });
 }
 
@@ -265,6 +286,27 @@ async function iniciarStreaming() {
       const videoBuffer = mediaSource.addSourceBuffer(`${videoMimeType}; codecs="${videoCodecs}"`);
       const audioBuffer = mediaSource.addSourceBuffer(`${audioMimeType}; codecs="${audioCodecs}"`);
 
+      videoPlayer.value.addEventListener('seeking', () => {
+        const tempo = videoPlayer.value.currentTime;
+        console.log(`usuario clicou em ${tempo} segundos`);
+
+        if (!tempoJaEstaBaixado(tempo, videoBuffer)) {
+          const novoChunk = Math.floor(tempo / tamanhoSegmentos) + 1;
+
+          console.log(`O tempo ${tempo}s não está na memória. Pulando o download para o Chunk ${novoChunk}`);
+          
+          // 3. Atualiza a variável global que controla o seu loop 'while'
+          chunkAtual = novoChunk;
+          
+          // O navegador nativamente vai ficar com a "rodinha" girando carregando.
+          // O seu loop while vai processar o 'chunkAtual' novo na próxima iteração
+          // e o vídeo voltará a tocar automaticamente assim que injetar!
+        } else {
+          console.log("Tempo já está na memória! Nenhum download necessário.");
+        }
+
+      });
+
       // Função Mágica: Baixa um pedaço em formato binário e espera o buffer engolir
       const fetchAndAppend = async (url, targetBuffer) => {
         const res = await fetch(url);
@@ -295,6 +337,9 @@ async function iniciarStreaming() {
       
       // for (let i = 1; i <= quantidadeDeChunks; i++, chunkAtual++) {
       while(chunkAtual <= quantidadeDeChunks){
+
+        await aguardarEspacoNoBuffer(videoPlayer.value, videoBuffer, 5);
+
         let i = chunkAtual;
         // Monta o nome do arquivo substituindo as variaveis dinâmicas do XML
         // Dependendo de como você gerou no FFmpeg, o $Number$ pode ser $Number%05d$ (com zeros). 
@@ -359,7 +404,11 @@ async function iniciarStreaming() {
           };
 
         }
-        chunkAtual++;
+        if (chunkAtual === i) {
+          chunkAtual++;
+        } else {
+          console.log(`Seek detectado durante o download. abortando avanço do chunk ${i}. O próximo será ${chunkAtual}`)
+        }
       }
 
       mediaSource.endOfStream();
