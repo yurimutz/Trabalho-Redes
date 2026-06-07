@@ -1,5 +1,6 @@
 <script setup>
   import { onMounted, ref } from 'vue';
+import Header from './components/Header.vue';
 import Carousel from './components/ui/carousel/Carousel.vue';
 import CarouselContent from './components/ui/carousel/CarouselContent.vue';
 import CarouselItem from './components/ui/carousel/CarouselItem.vue';
@@ -31,19 +32,11 @@ import CarouselPrevious from './components/ui/carousel/CarouselPrevious.vue';
 
 <template>
   
-  <header class="h-16 flex flex-wrap justify-center sm:justify-start items-center md:py-6 px-4 border-b">
-    <div class="wrapper py-5 gap-2 lg:gap-4 lg:pt-0">
-      <img alt="Vue logo" class="logo" src="./assets/redeflix.svg" width="24" height="24" />
-      <h3 
-        class="scroll-m-20 text-2xl font-semibold tracking-tight"
-        >
-        Redeflix</h3>
-      <!-- <HelloWorld msg="RedeFlix" /> -->
-    </div>
-  </header>
+  <Header />
 
-  
   <main class="mt-9">
+
+    <h1 class="scroll-m-20 text-4xl font-extrabold tracking-tight text-balance">Catálogo</h1>
 
     <Carousel 
       class="relative pt-8"
