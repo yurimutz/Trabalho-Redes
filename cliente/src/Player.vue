@@ -149,6 +149,30 @@ async function extraiInformacoesManifesto(){
 
 }
 
+async function criarMediaSource() {
+  mediaSource = new MediaSource();
+  videoPlayer.value.src = URL.createObjectURL(mediaSource);
+
+  await new Promise((resolve) => {
+    mediaSource.addEventListener('sourceopen', async () => {
+      mediaSource.duration = tamanhoVideoTotal;
+
+      videoBuffer = mediaSource.addSourceBuffer(`${videoMimeType}; codecs="${videoCodecs}"`);
+      audioBuffer = mediaSource.addSourceBuffer(`${audioMimeType}; codecs="${audioCodecs}"`);
+
+      const videoInitUrl = videoInitTemplate.replace('$RepresentationID$', videoRepId);
+      const audioInitUrl = audioInitTemplate.replace('$RepresentationID$', audioRepId);
+
+      await Promise.all([
+        fetchAndAppend(videosBaseUrl + videoInitUrl, videoBuffer),
+        fetchAndAppend(videosBaseUrl + audioInitUrl, audioBuffer)
+      ]);
+
+      resolve();
+    }, { once: true });
+  });
+}
+
 async function rodarGerenciadorDeChunks() {
   // Se o loop já estiver rodando, evita criar um processo duplicado na memória
   if (loopAtivo) return;
@@ -224,7 +248,7 @@ async function rodarGerenciadorDeChunks() {
             console.log("Setando qualidade " + j);
             videoRepId = j;
             videoInitUrl = videoInitTemplate.replace('$RepresentationID$', videoRepId);
-            fetchAndAppend(videosBaseUrl + videoInitUrl, videoBuffer);
+            await fetchAndAppend(videosBaseUrl + videoInitUrl, videoBuffer);
           }
           break;
         }
@@ -234,18 +258,20 @@ async function rodarGerenciadorDeChunks() {
     chunkAtual++;
   }
 
-  console.log("Todos os chunks baixados. Aguardando o vídeo terminar de tocar...");
-  const motivo = await aguardarFimDoVideo(videoPlayer.value);
-
   // FINAL DO VÍDEO NATURAL
   loopAtivo = false;
 
+  if (mediaSource.readyState === 'open') {
+    mediaSource.endOfStream();
+    console.log("Stream fechado com sucesso. Vídeo completo na memória!");
+  }
+
+  console.log("Todos os chunks baixados. Aguardando o vídeo terminar de tocar...");
+  const motivo = await aguardarFimDoVideo(videoPlayer.value);
+  
   if(motivo == "FIM"){
-    console.log("Todos os chunks foram processados. Fechando a transmissão...");
-    if (mediaSource.readyState === 'open') {
-      mediaSource.endOfStream();
-      console.log("Stream fechado com sucesso. Vídeo completo na memória!");
-    }
+    console.log("Todos os chunks foram processados. Fechando a transmissão...");  
+    console.log("Stream fechado com sucesso. Vídeo completo na memória!");
   } else {
     console.log("SEEK detectado apos o fim do ciclo do gerenciador");
   }
@@ -462,40 +488,19 @@ async function iniciarStreaming() {
     await extraiInformacoesManifesto();
     console.log("foi a extracao");
 
-    // 1. Inicia o MediaSource e vincula à tag de vídeo
-    mediaSource = new MediaSource();
-    videoPlayer.value.src = URL.createObjectURL(mediaSource);
-
-    // Só podemos começar a injetar coisas quando o source estiver aberto
-    mediaSource.addEventListener('sourceopen', async () => {
-
-      // Defini o tempo total do video
-      mediaSource.duration = tamanhoVideoTotal;
-
-      // Criando os buffers de video e audio
-      videoBuffer = mediaSource.addSourceBuffer(`${videoMimeType}; codecs="${videoCodecs}"`);
-      audioBuffer = mediaSource.addSourceBuffer(`${audioMimeType}; codecs="${audioCodecs}"`);
-
-      videoPlayer.value.addEventListener('seeking', async() => {
+    videoPlayer.value.addEventListener('seeking', async() => {
         const tempo = videoPlayer.value.currentTime;
         console.log(`usuario clicou em ${tempo} segundos`);
 
         const novoChunk = Math.floor(tempo / tamanhoSegmentos) + 1;
 
         if (!tempoJaEstaBaixado(tempo, videoBuffer, novoChunk)) {
-          //const novoChunk = Math.floor(tempo / tamanhoSegmentos) + 1;
-
           console.log(`O tempo ${tempo}s não está na memória. Pulando o download para o Chunk ${novoChunk}`);
           chunkAtual = novoChunk;
 
-          // if (mediaSource.readyState === 'ended') {
-          //   console.log("Reabrindo MediaSource fechado para permitir re-injeção...");
-          //   mediaSource.duration = tamanhoVideoTotal; 
-          // }
-
           promessaDeLimpeza = Promise.all([
-            limparBufferSeguro(videoBuffer, mediaSource.duration),
-            limparBufferSeguro(audioBuffer, mediaSource.duration)
+            limparBufferSeguro(videoBuffer, tamanhoVideoTotal),
+            limparBufferSeguro(audioBuffer, tamanhoVideoTotal)
           ]);
           
           // 2. Espera a faxina terminar
@@ -506,8 +511,6 @@ async function iniciarStreaming() {
 
           if (!loopAtivo) {
             console.log("Ressuscitando o loop de chunks para processar o retrocesso...");
-            console.log("Reabrindo MediaSource fechado para permitir re-injeção...");
-            mediaSource.duration = tamanhoVideoTotal;
             rodarGerenciadorDeChunks();
           }
 
@@ -517,22 +520,8 @@ async function iniciarStreaming() {
 
       });
 
-      // 5. Baixa e Injeta o Cabeçalho (Init) - Obrigatório antes dos chunks!
-      // Substitui a variavel $RepresentationID$ pelo ID real
-      let videoInitUrl = videoInitTemplate.replace('$RepresentationID$', videoRepId);
-      const audioInitUrl = audioInitTemplate.replace('$RepresentationID$', audioRepId);
-
-      console.log("Baixando inits...");
-
-      // Promisse para baixar os dois ao mesmo tempo
-      await Promise.all([
-        fetchAndAppend(videosBaseUrl + videoInitUrl, videoBuffer),
-        fetchAndAppend(videosBaseUrl + audioInitUrl, audioBuffer)
-      ]);
-
-      // 6. Inicia o gerenciador de chunks como função reutilizável
+      await criarMediaSource();
       rodarGerenciadorDeChunks();
-    });
 
   } catch (error) {
     console.error("Falha ao buscar o manifesto ou injetar chunks:", error.message);
