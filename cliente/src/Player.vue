@@ -234,34 +234,56 @@ async function rodarGerenciadorDeChunks() {
     chunkAtual++;
   }
 
+  console.log("Todos os chunks baixados. Aguardando o vídeo terminar de tocar...");
+  const motivo = await aguardarFimDoVideo(videoPlayer.value);
+
   // FINAL DO VÍDEO NATURAL
   loopAtivo = false;
-  console.log("Todos os chunks foram processados. Fechando a transmissão...");
-  if (mediaSource.readyState === 'open') {
-    mediaSource.endOfStream();
-    console.log("Stream fechado com sucesso. Vídeo completo na memória!");
+
+  if(motivo == "FIM"){
+    console.log("Todos os chunks foram processados. Fechando a transmissão...");
+    if (mediaSource.readyState === 'open') {
+      mediaSource.endOfStream();
+      console.log("Stream fechado com sucesso. Vídeo completo na memória!");
+    }
+  } else {
+    console.log("SEEK detectado apos o fim do ciclo do gerenciador");
   }
 }
 
-// function aguardarFimDoVideo(videoElement) {
-//   return new Promise((resolve) => {
+function aguardarFimDoVideo(videoElement) {
+  return new Promise((resolve) => {
     
-//     // 1. Criamos a função que vai reagir ao evento
-//     const aoTerminar = () => {
-//       console.log("O vídeo chegou ao fim!");
+    // 1. Criamos a função que vai reagir ao evento
+    const aoTerminar = () => {
+      console.log("O vídeo chegou ao fim!");
       
-//       // 2. Removemos o escutador imediatamente para que ele não 
-//       // dispare duplicado caso o usuário dê replay no vídeo depois.
-//       videoElement.removeEventListener('ended', aoTerminar);
+      // 2. Removemos o escutador imediatamente para que ele não 
+      // dispare duplicado caso o usuário dê replay no vídeo depois.
+      videoElement.removeEventListener('ended', aoTerminar);
       
-//       // 3. Resolve a Promise retornando o 'false' que você pediu
-//       resolve(false);
-//     };
+      // 3. Resolve a Promise retornando o 'false' que você pediu
+      resolve("FIM");
+    };
 
-//     // 4. Atrelamos o escutador ao player
-//     videoElement.addEventListener('ended', aoTerminar);
-//   });
-// }
+    const aoSeeking = () => {
+      limparListeners();
+      console.log("Seek detectado durante espera do fim. Abortando...");
+      resolve("SEEK_DETECTADO");
+    };
+
+    // 4. Atrelamos o escutador ao player
+    //videoElement.addEventListener('ended', aoTerminar);
+
+    const limparListeners = () => {
+      videoElement.removeEventListener('ended', aoTerminar);
+      videoElement.removeEventListener('seeking', aoSeeking);
+    };
+
+    videoElement.addEventListener('ended', aoTerminar);
+    videoElement.addEventListener('seeking', aoSeeking);
+  });
+}
 
 function calcularChunksNoBuffer(videoElement, videoBuffer) {
   if (videoBuffer.buffered.length > 0) {
@@ -466,10 +488,10 @@ async function iniciarStreaming() {
           console.log(`O tempo ${tempo}s não está na memória. Pulando o download para o Chunk ${novoChunk}`);
           chunkAtual = novoChunk;
 
-          if (mediaSource.readyState === 'ended') {
-            console.log("Reabrindo MediaSource fechado para permitir re-injeção...");
-            mediaSource.duration = tamanhoVideoTotal; 
-          }
+          // if (mediaSource.readyState === 'ended') {
+          //   console.log("Reabrindo MediaSource fechado para permitir re-injeção...");
+          //   mediaSource.duration = tamanhoVideoTotal; 
+          // }
 
           promessaDeLimpeza = Promise.all([
             limparBufferSeguro(videoBuffer, mediaSource.duration),
@@ -484,6 +506,8 @@ async function iniciarStreaming() {
 
           if (!loopAtivo) {
             console.log("Ressuscitando o loop de chunks para processar o retrocesso...");
+            console.log("Reabrindo MediaSource fechado para permitir re-injeção...");
+            mediaSource.duration = tamanhoVideoTotal;
             rodarGerenciadorDeChunks();
           }
 
@@ -497,7 +521,6 @@ async function iniciarStreaming() {
       // Substitui a variavel $RepresentationID$ pelo ID real
       let videoInitUrl = videoInitTemplate.replace('$RepresentationID$', videoRepId);
       const audioInitUrl = audioInitTemplate.replace('$RepresentationID$', audioRepId);
-
 
       console.log("Baixando inits...");
 
