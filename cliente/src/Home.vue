@@ -44,10 +44,9 @@ import CarouselPrevious from './components/ui/carousel/CarouselPrevious.vue';
 
   
   <main class="mt-9">
-    <a href="/player" style="padding: 10px; cursor: pointer;">Ir para o Player de Vídeo</a>
 
     <Carousel 
-      class="relative pt-12"
+      class="relative pt-8"
       :opts="{
         align: 'start',
       }"
@@ -61,12 +60,15 @@ import CarouselPrevious from './components/ui/carousel/CarouselPrevious.vue';
           <!-- <Card> -->
             <!-- <CardContent class="flex flex-col items-center justify-center p-0"> -->
               <!-- <span class="text-3xl font-semibold">{{ i }}</span> -->
-              <img
-                v-if="video.thumbnail"
-                :src="`${urlVideos + video.thumbnail}`"
-                :alt="video.nome"
-                class="w-full aspect-video object-cover rounded-md"
-              />
+               <div v-if="video.thumbnail" class="w-full overflow-hidden rounded-md">
+                <router-link :to="{ path: '/player', query : { m: video.manifesto } }">
+                  <img
+                    :src="`${urlVideos + video.thumbnail}`"
+                    :alt="video.nome"
+                    class="w-full aspect-video object-cover rounded-md transition-all duration-300 hover:scale-110"
+                  />
+                </router-link>
+               </div>
               <div
                 v-else
                 class="w-full aspect-video bg-muted flex items-center justify-center rounded-md"

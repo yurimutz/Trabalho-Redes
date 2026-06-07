@@ -1,6 +1,8 @@
 <script setup>
 import { onMounted, ref } from 'vue';
+import { useRoute } from 'vue-router';
 const videoPlayer = ref(null);
+const route = useRoute();
 
 let chunkAtual = 1;
 let manifest = null;
@@ -37,8 +39,8 @@ let historicoBanda = [];
 let tamanhoBufferBanda = 0;
 let tamMaxBufferBanda = 5;
 
-const manifestUrl = "http://localhost:8080/manifesto/lol/manifesto1.mpd";
-const videosBaseUrl = "http://localhost:8080/videos/lol/"; // Ajuste conforme sua pasta de vídeos
+let manifestUrl = "";
+let videosBaseUrl = ""; // Ajuste conforme sua pasta de vídeos
 
 async function buscaManifesto() {
   // 2. Busca e analisa o manifesto (O que você já tinha feito!)
@@ -245,6 +247,17 @@ async function injetarComSeguranca(bufferDoCanal, dados) {
 
 async function iniciarStreaming() {
   try {
+
+    const mParam = route.query.m;
+    if (!mParam) {
+      alert("nenhum video selecionado");
+      return;
+    }
+
+    manifestUrl = `http://localhost:8080/${mParam}`;
+
+    const ultimaBarra = manifestUrl.lastIndexOf('/');
+    videosBaseUrl = manifestUrl.substring(0, ultimaBarra + 1);
 
     await buscaManifesto();
     console.log("foi o manifesto");
