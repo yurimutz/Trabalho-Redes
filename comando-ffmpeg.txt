@@ -17,8 +17,7 @@ ffmpeg -i "video_original.mp4" \
   -init_seg_name 'init_$RepresentationID$.mp4' \
   -media_seg_name 'chunk_$RepresentationID$_$Number$.m4s' \
   -adaptation_sets "id=0,streams=v id=1,streams=a" \
-  manifesto.mpd
-
--ss 00:00:01.000 \
--vf "split[original][fundo];[fundo]scale=640:360,boxblur=15:15[fundodesfocado];[original]scale=640:360:force_original_aspect_ratio=decrease[videocentro];[fundodesfocado][videocentro]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2" \
--vframes 1 output.png
+  manifesto.mpd \
+  -ss 00:00:30.000 \
+  -vf "split[original][fundo];[fundo]scale=640:360,boxblur=15:15[fundodesfocado];[original]scale=640:360:force_original_aspect_ratio=decrease[videocentro];[fundodesfocado][videocentro]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2" \
+  -vframes 1 output.png
