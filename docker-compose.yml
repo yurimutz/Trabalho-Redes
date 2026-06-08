@@ -27,9 +27,7 @@ services:
     networks:
       - rede_streaming
 
-  # ==========================================
   # ORIGEM 1
-  # ==========================================
   backend-go-1:
     build: 
       context: ./back-end-go # Usa a mesma pasta de código!
@@ -41,9 +39,7 @@ services:
     networks:
       - rede_streaming
 
-  # ==========================================
-  # ORIGEM 2 (O Clone)
-  # ==========================================
+  # ORIGEM 2
   backend-go-2:
     build: 
       context: ./back-end-go2 # Usa a mesma pasta de código!
