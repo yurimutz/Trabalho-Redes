@@ -8,7 +8,7 @@ import CarouselNext from './components/ui/carousel/CarouselNext.vue';
 import CarouselPrevious from './components/ui/carousel/CarouselPrevious.vue';
 
   const ipDoServidor = window.location.hostname;
-  const urlCatalogo = `http://${ipDoServidor}:8080/catalogo`;
+  const urlCatalogo = `http://${ipDoServidor}:8050/catalogo`;
   const urlVideos = `http://${ipDoServidor}:8080/`
 
   const videos = ref([]);

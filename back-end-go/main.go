@@ -24,7 +24,7 @@ func buscarThumbnail(caminhoDaPasta string, nomeDaPasta string) string {
 
 	for _, arq := range arquivos {
 		// Ignora subpastas e checa se o nome termina com .png
-		if !arq.IsDir() && strings.HasSuffix(strings.ToLower(arq.Name()), ".jpg") {
+		if !arq.IsDir() && (strings.HasSuffix(strings.ToLower(arq.Name()), ".jpg") || strings.HasSuffix(strings.ToLower(arq.Name()), ".png")) {
 			// Monta a URL que o Vue usará na tag <img src="...">
 			return fmt.Sprintf("/videos/%s/%s", nomeDaPasta, arq.Name())
 		}

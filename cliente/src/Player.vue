@@ -9,6 +9,8 @@ let chunkAtual = 1;
 let manifest = null;
 let promessaDeLimpeza = null;
 let loopAtivo = false;
+let videoInitUrl = null;
+
 
 // Video config
 let videoSet = null;
@@ -171,7 +173,7 @@ async function rodarGerenciadorDeChunks() {
 
   console.log("Processo produtor de chunks ativado.");
 
-  let videoInitUrl = videoInitTemplate.replace('$RepresentationID$', videoRepId);
+  videoInitUrl = videoInitTemplate.replace('$RepresentationID$', videoRepId);
 
   while (chunkAtual <= quantidadeDeChunks) {
 
@@ -219,7 +221,7 @@ async function rodarGerenciadorDeChunks() {
     tamanhoBufferBanda++;
 
     console.log("Historico de chunks atualizado: " + i);
-    hist.push(i);
+    //hist.push(i);
 
     if (i !== chunkAtual) continue;
     await injetarComSeguranca(videoBuffer, resultadoVideo.dados);
@@ -228,23 +230,28 @@ async function rodarGerenciadorDeChunks() {
 
     console.log(`Pedaço ${i} injetado! (Video + Audio)`);
 
-    if (tamanhoBufferBanda > 2) {
-      const mediaBanda = (historicoBanda[0] + historicoBanda[1] + historicoBanda[2]) / 3;
-      tamanhoBufferBanda = 0;
-      console.log("Media de banda atual:" + mediaBanda);
+    const tempoAgora = videoPlayer.value.currentTime;
+    await limparPassado(videoBuffer, tempoAgora);
+    await limparPassado(audioBuffer, tempoAgora);
 
-      for (let j = qualidades.length; j >= 0; j--) {
-        if (mediaBanda >= qualidades[j]) {
-          if (videoRepId != j) {
-            console.log("Setando qualidade " + j);
-            videoRepId = j;
-            videoInitUrl = videoInitTemplate.replace('$RepresentationID$', videoRepId);
-            await fetchAndAppend(videosBaseUrl + videoInitUrl, videoBuffer);
-          }
-          break;
-        }
-      }
-    }
+    await logicaABR();
+    // if (tamanhoBufferBanda > 2) {
+    //   const mediaBanda = (historicoBanda[0] + historicoBanda[1] + historicoBanda[2]) / 3;
+    //   tamanhoBufferBanda = 0;
+    //   console.log("Media de banda atual:" + mediaBanda);
+
+    //   for (let j = qualidades.length; j >= 0; j--) {
+    //     if (mediaBanda >= qualidades[j]) {
+    //       if (videoRepId != j) {
+    //         console.log("Setando qualidade " + j);
+    //         videoRepId = j;
+    //         videoInitUrl = videoInitTemplate.replace('$RepresentationID$', videoRepId);
+    //         await fetchAndAppend(videosBaseUrl + videoInitUrl, videoBuffer);
+    //       }
+    //       break;
+    //     }
+    //   }
+    // }
 
     chunkAtual++;
   }
@@ -261,7 +268,8 @@ async function rodarGerenciadorDeChunks() {
   const motivo = await aguardarFimDoVideo(videoPlayer.value);
   
   if(motivo == "FIM"){
-    console.log("Todos os chunks foram processados. Fechando a transmissão...");  
+    console.log("Todos os chunks foram processados. Fechando a transmissão...");
+    //mediaSource.endOfStream();  
     console.log("Stream fechado com sucesso. Vídeo completo na memória!");
   } else {
     console.log("SEEK detectado apos o fim do ciclo do gerenciador");
@@ -318,15 +326,102 @@ function calcularChunksNoBuffer(videoElement, videoBuffer) {
   return 0;
 }
 
-function tempoJaEstaBaixado(tempoDesejado, videoBuffer, novoChunk) {
-  // So verifica se o id do chunk esta no array
-  if(hist.includes(novoChunk)){
-    console.log("Ja contem esse chunk em memoria");
-    return true;
+async function logicaABR(){
+  if (tamanhoBufferBanda > 2) {
+        const mediaBanda = (historicoBanda[0] + historicoBanda[1] + historicoBanda[2]) / 3;
+        tamanhoBufferBanda = 0;
+        console.log("Media de banda atual:" + mediaBanda);
+
+        for (let j = qualidades.length; j >= 0; j--) {
+          if (mediaBanda >= qualidades[j]) {
+            if (videoRepId != j) {
+              console.log("Setando qualidade " + j);
+              videoRepId = j;
+              videoInitUrl = videoInitTemplate.replace('$RepresentationID$', videoRepId);
+              await fetchAndAppend(videosBaseUrl + videoInitUrl, videoBuffer);
+            } else {
+              console.log(`Qualidade ${j} mantida`);
+            }
+            break;
+          }
+        }
+      }
+}
+
+// So estava aqui temporariamente, em algum momento vai dar problema
+// Acabou dando quando tentei limpar o buffer velho do player
+// function tempoJaEstaBaixado(tempoDesejado, videoBuffer, novoChunk) {
+//   // So verifica se o id do chunk esta no array
+//   if(hist.includes(novoChunk)){
+//     console.log("Ja contem esse chunk em memoria");
+//     return true;
+//   }
+
+//   console.log("Chunk ainda nao esta em memoria " + novoChunk);
+//   return false;
+// }
+
+function tempoJaEstaBaixado(tempoDesejado, videoBuffer) {
+  // Se não tem nada alocado, já sabemos que não está na memória
+  if (!videoBuffer || videoBuffer.buffered.length === 0) {
+    console.log(`Cache Miss: Buffer está completamente vazio.`);
+    return false;
   }
 
-  console.log("Chunk ainda nao esta em memoria " + novoChunk);
+  const ranges = videoBuffer.buffered;
+  // Margem de segurança (em segundos) para evitar que o player trave se o usuário 
+  // clicar exatamente no milissegundo final de um chunk baixado.
+  const margemSeguranca = 0.5; 
+
+  // Percorre o array de "janelas" do buffer pra ver se o tempoDesejado cai dentro de algum bloco
+  for (let i = 0; i < ranges.length; i++) {
+    const inicioDoBloco = ranges.start(i);
+    const fimDoBloco = ranges.end(i);
+
+    if (tempoDesejado >= inicioDoBloco && tempoDesejado <= (fimDoBloco - margemSeguranca)) {
+      console.log(`Cache Hit! Tempo ${tempoDesejado.toFixed(1)}s está na RAM (Bloco: ${inicioDoBloco.toFixed(1)}s até ${fimDoBloco.toFixed(1)}s)`);
+      return true;
+    }
+  }
+
+  console.log(`Cache Miss! Tempo ${tempoDesejado.toFixed(1)}s NÃO está na RAM.`);
   return false;
+}
+
+function limparPassado(buffer, tempoAtual) {
+  return new Promise((resolve) => {
+    const margemSeguranca = 10; // 10 segundos no passado
+
+    // Se o buffer estiver ocupado com outra coisa ou vazio, ignora e destrava o loop
+    if (!buffer || buffer.updating || buffer.buffered.length === 0) {
+      resolve();
+      return;
+    }
+
+    const tempoCorte = tempoAtual - margemSeguranca;
+    const inicioPrimeiroBloco = buffer.buffered.start(0);
+
+    // Se tiver coisa suficiente para ser limpa
+    if (inicioPrimeiroBloco < tempoCorte) {
+      const aoTerminar = () => {
+        buffer.removeEventListener('updateend', aoTerminar);
+        resolve();
+      };
+
+      buffer.addEventListener('updateend', aoTerminar);
+
+      try {
+        console.log(`Faxina: Limpando de ${inicioPrimeiroBloco.toFixed(1)}s até ${tempoCorte.toFixed(1)}s`);
+        buffer.remove(inicioPrimeiroBloco, tempoCorte);
+      } catch (erro) {
+        buffer.removeEventListener('updateend', aoTerminar);
+        resolve(); 
+      }
+    } else {
+      // Buffer velho muito pequeno
+      resolve(); 
+    }
+  });
 }
 
 function limparBufferSeguro(buffer, duracaoTotal) {
@@ -345,7 +440,7 @@ function limparBufferSeguro(buffer, duracaoTotal) {
     const aoTerminarLimpeza = () => {
       buffer.removeEventListener('updateend', aoTerminarLimpeza);
       console.log("Buffer limpo com sucesso!");
-      hist.length = 0;
+      //hist.length = 0;
       resolve();
     };
 
