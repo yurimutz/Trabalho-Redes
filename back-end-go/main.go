@@ -24,7 +24,7 @@ func buscarThumbnail(caminhoDaPasta string, nomeDaPasta string) string {
 
 	for _, arq := range arquivos {
 		// Ignora subpastas e checa se o nome termina com .png
-		if !arq.IsDir() && (strings.HasSuffix(strings.ToLower(arq.Name()), ".jpg") || strings.HasSuffix(strings.ToLower(arq.Name()), ".png")) {
+		if !arq.IsDir() && strings.HasSuffix(strings.ToLower(arq.Name()), ".jpg") {
 			// Monta a URL que o Vue usará na tag <img src="...">
 			return fmt.Sprintf("/videos/%s/%s", nomeDaPasta, arq.Name())
 		}
@@ -34,7 +34,7 @@ func buscarThumbnail(caminhoDaPasta string, nomeDaPasta string) string {
 }
 
 func ListaVideosHandler(w http.ResponseWriter, r *http.Request) {
-	// Caminho onde o volume do Docker está montado no Go
+	// Este é o caminho exato onde o volume do Docker está montado no Go
 	baseDir := "/app/videos"
 
 	// Lê tudo o que está na raiz da pasta de vídeos
@@ -46,19 +46,21 @@ func ListaVideosHandler(w http.ResponseWriter, r *http.Request) {
 
 	var listaVideos []VideoInfo
 
+	// Itera sobre cada item encontrado
 	for _, entrada := range entradas {
+		// Só nos interessa se for uma pasta (ex: /app/videos/meu_video_1)
 		if entrada.IsDir() {
 			nomeDaPasta := entrada.Name()
 			caminhoDaPasta := filepath.Join(baseDir, nomeDaPasta)
 
-			// O nome formatado (substitui underlines por espaços para ficar bonito no front)
+			// 1. O nome formatado (substitui underlines por espaços para ficar bonito no front)
 			tituloLimpo := strings.ReplaceAll(nomeDaPasta, "_", " ")
 			tituloLimpo = strings.Title(tituloLimpo) // Ex: "meu_video" vira "Meu Video"
 
-			// A URL do manifesto (baseada na regra do seu Nginx/Vite)
+			// 2. A URL do manifesto (baseada na regra do seu Nginx/Vite)
 			urlManifesto := fmt.Sprintf("/videos/%s/manifesto.mpd", nomeDaPasta)
 
-			// Procura a imagem da Thumbnail (.png) dinamicamente
+			// 3. Procura a imagem da Thumbnail (.png) dinamicamente
 			urlThumbnail := buscarThumbnail(caminhoDaPasta, nomeDaPasta)
 
 			// Adiciona ao array
@@ -82,6 +84,20 @@ func main() {
 
 	pastaVideos := "/app/videos"
 
+	// http.HandleFunc("/teste/", func(w http.ResponseWriter, r *http.Request) {
+	// 	if(r.Method != "GET"){
+	// 	}
+	// 	//Teste de retornos
+	// 	io.WriteString(w, "Hello from a HandleFunc #2 %s!\n", r.URL)
+	// 	fmt.Fprintf(w, "Hello from a HandleFunc #2 %s!\n", r.URL)
+	// })
+
+	// /videos/iogurte/chunk_1_1.m4s
+	// iogurte/chunk_1_1.m4s
+	// /app/videos/iogurte/chunk_1_1.m4s
+
+	// meus_videos_gerados/iogurte/chunk_1_1.m4ss
+
 	http.HandleFunc("/videos/", func(w http.ResponseWriter, r *http.Request) {
 		nomeArquivo := strings.TrimPrefix(r.URL.Path, "/videos/")
 		caminhoFisico := filepath.Join(pastaVideos, nomeArquivo)
@@ -90,6 +106,7 @@ func main() {
 	})
 
 	http.HandleFunc("/manifesto/", func(w http.ResponseWriter, r *http.Request) {
+		//fmt.Fprintf(w, "Hello from a HandleFunc #2 %s!\n", r.URL)
 		nomeArquivo := strings.TrimPrefix(r.URL.Path, "/manifesto/")
 		caminhoFisico := filepath.Join(pastaVideos, nomeArquivo)
 		http.ServeFile(w, r, caminhoFisico)

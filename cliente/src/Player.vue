@@ -463,13 +463,6 @@ async function iniciarStreaming() {
     const ultimaBarra = manifestUrl.lastIndexOf('/');
     videosBaseUrl = manifestUrl.substring(0, ultimaBarra + 1);
 
-    // manifestUrl = `http://${ipDoServidor}:8080/${mParam}`;
-
-    // manifestUrl2 = `http://localhost:8080/${mParam}`;
-
-    // const ultimaBarra = manifestUrl2.lastIndexOf('/');
-    // videosBaseUrl = manifestUrl2.substring(0, ultimaBarra + 1);
-
     await buscaManifesto();
     console.log("foi o manifesto");
     await extraiInformacoesManifesto();

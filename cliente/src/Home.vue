@@ -7,13 +7,9 @@ import CarouselItem from './components/ui/carousel/CarouselItem.vue';
 import CarouselNext from './components/ui/carousel/CarouselNext.vue';
 import CarouselPrevious from './components/ui/carousel/CarouselPrevious.vue';
 
-  // const urlCatalogo = "http://localhost:8050/catalogo";
-  // const urlVideos = "http://localhost:8080/"
   const ipDoServidor = window.location.hostname;
-  const urlCatalogo = `http://${ipDoServidor}:8050/catalogo`;
+  const urlCatalogo = `http://${ipDoServidor}:8080/catalogo`;
   const urlVideos = `http://${ipDoServidor}:8080/`
-  //`http://${ipDoServidor}:8080/${mParam}`
-  //192.168.100.86
 
   const videos = ref([]);
 
