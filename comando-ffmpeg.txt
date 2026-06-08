@@ -1,0 +1,24 @@
+ffmpeg -i "video_original.mp4" \
+  -filter_complex "[0:v]fps=30,scale=256:144:force_original_aspect_ratio=decrease,pad=256:144:(ow-iw)/2:(oh-ih)/2,setsar=1[v144]; \
+                   [0:v]fps=30,scale=640:360:force_original_aspect_ratio=decrease,pad=640:360:(ow-iw)/2:(oh-ih)/2,setsar=1[v360]; \
+                   [0:v]fps=30,scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,setsar=1[v720]; \
+                   [0:v]fps=30,scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,setsar=1[v1080]" \
+  -map "[v144]" -map "[v360]" -map "[v720]" -map "[v1080]" -map 0:a \
+  -b:v:0 200k -c:v:0 libx264 -profile:v:0 main \
+  -b:v:1 800k -c:v:1 libx264 -profile:v:1 main \
+  -b:v:2 3000k -c:v:2 libx264 -profile:v:2 high \
+  -b:v:3 6000k -c:v:3 libx264 -profile:v:3 high \
+  -c:a aac -b:a 128k -ac 2 \
+  -force_key_frames "expr:gte(t,n_forced*4)" \
+  -f dash \
+  -seg_duration 4 \
+  -use_template 1 \
+  -use_timeline 1 \
+  -init_seg_name 'init_$RepresentationID$.mp4' \
+  -media_seg_name 'chunk_$RepresentationID$_$Number$.m4s' \
+  -adaptation_sets "id=0,streams=v id=1,streams=a" \
+  manifesto.mpd
+
+-ss 00:00:01.000 \
+-vf "split[original][fundo];[fundo]scale=640:360,boxblur=15:15[fundodesfocado];[original]scale=640:360:force_original_aspect_ratio=decrease[videocentro];[fundodesfocado][videocentro]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2" \
+-vframes 1 output.png
