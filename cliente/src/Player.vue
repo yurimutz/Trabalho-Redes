@@ -202,7 +202,7 @@ async function rodarGerenciadorDeChunks() {
                           .replace('$RepresentationID$', audioRepId)
                           .replace('$Number$', i);
 
-    const motivo = await aguardarEspacoNoBuffer(videoPlayer.value, videoBuffer, 2);
+    const motivo = await aguardarEspacoNoBuffer(videoPlayer.value, videoBuffer, 3);
 
     if (motivo === "SEEK_DETECTADO") {
       console.log(`Seek detectado durante o download. Abortando avanço do chunk ${i}. O próximo será ${chunkAtual}.`);
@@ -239,7 +239,7 @@ async function rodarGerenciadorDeChunks() {
 
     console.log(`Pedaço ${i} injetado! (Video + Audio)`);
 
-    if (tamanhoBufferBanda > 3) {
+    if (tamanhoBufferBanda > 2) {
       const mediaBanda = (historicoBanda[0] + historicoBanda[1] + historicoBanda[2]) / 3;
       tamanhoBufferBanda = 0;
       console.log("Media de banda atual:" + mediaBanda);
@@ -390,7 +390,7 @@ function aguardarEspacoNoBuffer(videoElement, videoBuffer, limiteChunks) {
     
     // 1. Checagem imediata: se já tiver espaço, nem precisa criar o evento, 
     // resolve a Promise na hora e deixa o loop seguir.
-    if (calcularChunksNoBuffer(videoElement, videoBuffer) <= limiteChunks) {
+    if (calcularChunksNoBuffer(videoElement, videoBuffer) < limiteChunks) {
       resolve("ESPACO_LIVRE");
       return;
     }
@@ -399,7 +399,7 @@ function aguardarEspacoNoBuffer(videoElement, videoBuffer, limiteChunks) {
 
     // 2. A função que será chamada a cada milissegundo que o vídeo tocar
     const checarEstoque = () => {
-      if (calcularChunksNoBuffer(videoElement, videoBuffer) <= limiteChunks) {
+      if (calcularChunksNoBuffer(videoElement, videoBuffer) < limiteChunks) {
         limparListeners("ESPACO_LIVRE");
       }
     };
