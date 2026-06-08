@@ -1,6 +1,9 @@
 <script setup>
 import { onMounted, ref } from 'vue';
+import { useRoute } from 'vue-router';
+import Header from './components/Header.vue';
 const videoPlayer = ref(null);
+const route = useRoute();
 
 let chunkAtual = 1;
 let manifest = null;
@@ -45,9 +48,8 @@ let tamanhoBufferBanda = 0;
 let tamMaxBufferBanda = 5;
 
 let hist = [];
-
-const manifestUrl = "http://localhost:8080/manifesto/lol/manifesto1.mpd";
-const videosBaseUrl = "http://localhost:8080/videos/lol/"; // Ajuste conforme sua pasta de vídeos
+let manifestUrl = "";
+let videosBaseUrl = ""; // Ajuste conforme sua pasta de vídeos
 
 async function buscaManifesto() {
   // 2. Busca e analisa o manifesto (O que você já tinha feito!)
@@ -483,6 +485,17 @@ async function fetchAndAppend(url, targetBuffer) {
 async function iniciarStreaming() {
   try {
 
+    const mParam = route.query.m;
+    if (!mParam) {
+      alert("nenhum video selecionado");
+      return;
+    }
+
+    manifestUrl = `http://localhost:8080/${mParam}`;
+
+    const ultimaBarra = manifestUrl.lastIndexOf('/');
+    videosBaseUrl = manifestUrl.substring(0, ultimaBarra + 1);
+
     await buscaManifesto();
     console.log("foi o manifesto");
     await extraiInformacoesManifesto();
@@ -534,22 +547,29 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="player-container">
-    <h2>Player de Vídeo</h2>
-    <p>A navegação via Vue Router funcionou com sucesso!</p>
-    <a href="/">home</a>
 
+  <Header />
+
+  <div class="player-container">
+    <!-- <h2>Player de Vídeo</h2>
+    <p>A navegação via Vue Router funcionou com sucesso!</p> -->
+    
     <div class="video-wrapper">
       <video ref="videoPlayer" controls autoplay muted></video>
     </div>
+
+    <!-- <a href="/">Voltar para home</a> -->
+
   </div>
+  <a href="/" class="text-lg mt-6 group relative w-max">
+      <span class ="p-1 relative z-10 group-hover:text-white">Voltar para home</span>
+      <!-- <span class="absolute -bottom-1 left-1/2 w-0 transition-all h-0.5 bg-primary group-hover:w-3/6"></span> -->
+      <!-- <span class="absolute -bottom-1 right-1/2 w-0 transition-all h-0.5 bg-primary group-hover:w-3/6"></span> -->
+      <span class="absolute left-0 bottom-0 w-full h-0.5 transition-all bg-primary z-0 group-hover:h-full "></span>
+  </a>
 </template>
 
 <style scoped>
-.player-container {
-  padding: 20px;
-  /* min-height: 100vh; */
-}
 
 .video-wrapper {
   margin-top: 20px;
@@ -564,10 +584,6 @@ video {
   box-shadow: 0 4px 10px rgba(0,0,0,0.5);
 }
 
-a {
-  color: #42b883;
-  margin-bottom: 10px;
-}
 
 button {
   padding: 10px 20px;
