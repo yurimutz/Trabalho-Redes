@@ -1,6 +1,6 @@
 <template>
     <header class="h-16 flex flex-wrap justify-center sm:justify-start items-center md:py-6 border-b">
-        <div class="wrapper py-5 gap-2 lg:gap-4 lg:pt-0">
+        <div class="wrapper py-5 gap-2 lg:gap-4 md:pt-0">
             <img alt="Vue logo" class="logo" src="../assets/redeflix.svg" width="24" height="24" />
             <h3 class="scroll-m-20 text-2xl font-semibold tracking-tight">Redeflix</h3>
         </div>

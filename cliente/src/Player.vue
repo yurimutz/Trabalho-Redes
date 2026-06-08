@@ -404,20 +404,16 @@ onMounted(() => {
 
     <!-- <a href="/">Voltar para home</a> -->
 
-    <a href="/" class="text-lg m-3 group relative w-max">
+  </div>
+  <a href="/" class="text-lg mt-6 group relative w-max">
       <span class ="p-1 relative z-10 group-hover:text-white">Voltar para home</span>
       <!-- <span class="absolute -bottom-1 left-1/2 w-0 transition-all h-0.5 bg-primary group-hover:w-3/6"></span> -->
       <!-- <span class="absolute -bottom-1 right-1/2 w-0 transition-all h-0.5 bg-primary group-hover:w-3/6"></span> -->
       <span class="absolute left-0 bottom-0 w-full h-0.5 transition-all bg-primary z-0 group-hover:h-full "></span>
   </a>
-  </div>
 </template>
 
 <style scoped>
-.player-container {
-  padding: 20px;
-  /* min-height: 100vh; */
-}
 
 .video-wrapper {
   margin-top: 20px;
