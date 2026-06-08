@@ -574,7 +574,7 @@ onMounted(() => {
 .video-wrapper {
   margin-top: 20px;
   width: 100%;
-  max-width: 800px;
+  max-width: 1024px;
 }
 
 video {
