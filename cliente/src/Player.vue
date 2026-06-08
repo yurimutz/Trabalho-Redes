@@ -7,6 +7,8 @@ const route = useRoute();
 
 let chunkAtual = 1;
 let manifest = null;
+let promessaDeLimpeza = null;
+let loopAtivo = false;
 
 // Video config
 let videoSet = null;
@@ -35,11 +37,17 @@ let audioSegment = null;
 let audioInitTemplate = null; 
 let audioMediaTemplate = null;
 
+// Instâncias do MediaSource e SourceBuffers (criadas em iniciarStreaming)
+let mediaSource = null;
+let videoBuffer = null;
+let audioBuffer = null;
+
 // Dados para controlar o buffer do mediaSource
 let historicoBanda = [];
 let tamanhoBufferBanda = 0;
 let tamMaxBufferBanda = 5;
 
+let hist = [];
 let manifestUrl = "";
 let videosBaseUrl = ""; // Ajuste conforme sua pasta de vídeos
 
@@ -143,6 +151,168 @@ async function extraiInformacoesManifesto(){
 
 }
 
+async function criarMediaSource() {
+  mediaSource = new MediaSource();
+  videoPlayer.value.src = URL.createObjectURL(mediaSource);
+
+  await new Promise((resolve) => {
+    mediaSource.addEventListener('sourceopen', async () => {
+      mediaSource.duration = tamanhoVideoTotal;
+
+      videoBuffer = mediaSource.addSourceBuffer(`${videoMimeType}; codecs="${videoCodecs}"`);
+      audioBuffer = mediaSource.addSourceBuffer(`${audioMimeType}; codecs="${audioCodecs}"`);
+
+      const videoInitUrl = videoInitTemplate.replace('$RepresentationID$', videoRepId);
+      const audioInitUrl = audioInitTemplate.replace('$RepresentationID$', audioRepId);
+
+      await Promise.all([
+        fetchAndAppend(videosBaseUrl + videoInitUrl, videoBuffer),
+        fetchAndAppend(videosBaseUrl + audioInitUrl, audioBuffer)
+      ]);
+
+      resolve();
+    }, { once: true });
+  });
+}
+
+async function rodarGerenciadorDeChunks() {
+  // Se o loop já estiver rodando, evita criar um processo duplicado na memória
+  if (loopAtivo) return;
+  loopAtivo = true;
+
+  console.log("Processo produtor de chunks ativado.");
+
+  let videoInitUrl = videoInitTemplate.replace('$RepresentationID$', videoRepId);
+
+  while (chunkAtual <= quantidadeDeChunks) {
+
+    if (promessaDeLimpeza) {
+      console.log("Loop em pausa aguardando a faxina dos buffers terminar...");
+      await promessaDeLimpeza;
+    }
+
+    let i = chunkAtual;
+
+    // Monta o nome do arquivo substituindo as variaveis dinâmicas do XML
+    let videoChunkUrl = videoMediaTemplate
+                          .replace('$RepresentationID$', videoRepId)
+                          .replace('$Number$', i);
+
+    let audioChunkUrl = audioMediaTemplate
+                          .replace('$RepresentationID$', audioRepId)
+                          .replace('$Number$', i);
+
+    const motivo = await aguardarEspacoNoBuffer(videoPlayer.value, videoBuffer, 2);
+
+    if (motivo === "SEEK_DETECTADO") {
+      console.log(`Seek detectado durante o download. Abortando avanço do chunk ${i}. O próximo será ${chunkAtual}.`);
+      continue;
+    }
+
+    console.log(`Baixando pedaço ${i}...`);
+
+    let [resultadoVideo, resultadoAudio] = await Promise.all([
+      baixarECalcularBanda(videosBaseUrl + videoChunkUrl),
+      baixarECalcularBanda(videosBaseUrl + audioChunkUrl)
+    ]);
+
+    if (i !== chunkAtual) {
+      console.log(`[Defesa] Download do chunk ${i} descartado. O seek alterou a rota para ${chunkAtual}.`);
+      continue;
+    }
+
+    // Exibe a banda calculada no console
+    console.log(`Banda do Vídeo: ${resultadoVideo.kbps.toFixed(2)} Kbps`);
+    console.log(`Banda do Áudio: ${resultadoAudio.kbps.toFixed(2)} Kbps`);
+
+    // Manipulações para a qualidade sob demanda
+    historicoBanda[tamanhoBufferBanda] = resultadoVideo.kbps;
+    tamanhoBufferBanda++;
+
+    console.log("Historico de chunks atualizado: " + i);
+    hist.push(i);
+
+    if (i !== chunkAtual) continue;
+    await injetarComSeguranca(videoBuffer, resultadoVideo.dados);
+    if (i !== chunkAtual) continue;
+    await injetarComSeguranca(audioBuffer, resultadoAudio.dados);
+
+    console.log(`Pedaço ${i} injetado! (Video + Audio)`);
+
+    if (tamanhoBufferBanda > 3) {
+      const mediaBanda = (historicoBanda[0] + historicoBanda[1] + historicoBanda[2]) / 3;
+      tamanhoBufferBanda = 0;
+      console.log("Media de banda atual:" + mediaBanda);
+
+      for (let j = qualidades.length; j >= 0; j--) {
+        if (mediaBanda >= qualidades[j]) {
+          if (videoRepId != j) {
+            console.log("Setando qualidade " + j);
+            videoRepId = j;
+            videoInitUrl = videoInitTemplate.replace('$RepresentationID$', videoRepId);
+            await fetchAndAppend(videosBaseUrl + videoInitUrl, videoBuffer);
+          }
+          break;
+        }
+      }
+    }
+
+    chunkAtual++;
+  }
+
+  // FINAL DO VÍDEO NATURAL
+  loopAtivo = false;
+
+  if (mediaSource.readyState === 'open') {
+    mediaSource.endOfStream();
+    console.log("Stream fechado com sucesso. Vídeo completo na memória!");
+  }
+
+  console.log("Todos os chunks baixados. Aguardando o vídeo terminar de tocar...");
+  const motivo = await aguardarFimDoVideo(videoPlayer.value);
+  
+  if(motivo == "FIM"){
+    console.log("Todos os chunks foram processados. Fechando a transmissão...");  
+    console.log("Stream fechado com sucesso. Vídeo completo na memória!");
+  } else {
+    console.log("SEEK detectado apos o fim do ciclo do gerenciador");
+  }
+}
+
+function aguardarFimDoVideo(videoElement) {
+  return new Promise((resolve) => {
+    
+    // 1. Criamos a função que vai reagir ao evento
+    const aoTerminar = () => {
+      console.log("O vídeo chegou ao fim!");
+      
+      // 2. Removemos o escutador imediatamente para que ele não 
+      // dispare duplicado caso o usuário dê replay no vídeo depois.
+      videoElement.removeEventListener('ended', aoTerminar);
+      
+      // 3. Resolve a Promise retornando o 'false' que você pediu
+      resolve("FIM");
+    };
+
+    const aoSeeking = () => {
+      limparListeners();
+      console.log("Seek detectado durante espera do fim. Abortando...");
+      resolve("SEEK_DETECTADO");
+    };
+
+    // 4. Atrelamos o escutador ao player
+    //videoElement.addEventListener('ended', aoTerminar);
+
+    const limparListeners = () => {
+      videoElement.removeEventListener('ended', aoTerminar);
+      videoElement.removeEventListener('seeking', aoSeeking);
+    };
+
+    videoElement.addEventListener('ended', aoTerminar);
+    videoElement.addEventListener('seeking', aoSeeking);
+  });
+}
+
 function calcularChunksNoBuffer(videoElement, videoBuffer) {
   if (videoBuffer.buffered.length > 0) {
     
@@ -167,13 +337,61 @@ function calcularChunksNoBuffer(videoElement, videoBuffer) {
   return 0;
 }
 
+function tempoJaEstaBaixado(tempoDesejado, videoBuffer, novoChunk) {
+  // O buffer pode ter vários "blocos" de tempo separados (TimeRanges) se o usuário pular muito
+  if(hist.includes(novoChunk)){
+    console.log("Ja contem esse chunk em memoria");
+    return true;
+  }
+
+  // for (let i = 0; i < videoBuffer.buffered.length; i++) {
+  //   const inicio = videoBuffer.buffered.start(i);
+  //   const fim = videoBuffer.buffered.end(i);
+    
+  //   // Se o tempo desejado estiver dentro deste bloco, já temos o vídeo!
+  //   if (tempoDesejado >= inicio && tempoDesejado <= fim) {
+  //     return true;
+  //   }
+  // }
+  console.log("Chunk ainda nao esta em memoria " + novoChunk);
+  return false;
+}
+
+function limparBufferSeguro(buffer, duracaoTotal) {
+  return new Promise((resolve) => {
+    // 1. Se estiver no meio de uma injeção, mandamos parar (abortar)
+    if (buffer.updating) {
+      buffer.abort();
+    }
+
+    // 2. Se o buffer já estiver completamente vazio, não precisa fazer nada
+    if (buffer.buffered.length === 0) {
+      resolve();
+      return;
+    }
+
+    // 3. Criamos um "escutador" para avisar quando a faxina terminar
+    const aoTerminarLimpeza = () => {
+      buffer.removeEventListener('updateend', aoTerminarLimpeza);
+      console.log("Buffer limpo com sucesso!");
+      hist.length = 0;
+      resolve(); // Destrava a Promise
+    };
+
+    buffer.addEventListener('updateend', aoTerminarLimpeza);
+
+    // 4. Dá a ordem de apagar tudo: do segundo 0 até o final do vídeo!
+    buffer.remove(0, duracaoTotal);
+  });
+}
+
 function aguardarEspacoNoBuffer(videoElement, videoBuffer, limiteChunks) {
   return new Promise((resolve) => {
     
     // 1. Checagem imediata: se já tiver espaço, nem precisa criar o evento, 
     // resolve a Promise na hora e deixa o loop seguir.
     if (calcularChunksNoBuffer(videoElement, videoBuffer) <= limiteChunks) {
-      resolve();
+      resolve("ESPACO_LIVRE");
       return;
     }
 
@@ -182,17 +400,24 @@ function aguardarEspacoNoBuffer(videoElement, videoBuffer, limiteChunks) {
     // 2. A função que será chamada a cada milissegundo que o vídeo tocar
     const checarEstoque = () => {
       if (calcularChunksNoBuffer(videoElement, videoBuffer) <= limiteChunks) {
-        
-        // MÁGICA: Assim que o espaço é liberado, removemos o "escutador" para não gastar memória...
-        videoElement.removeEventListener('timeupdate', checarEstoque);
-        
-        // ... e resolvemos a Promise, destravando o await no loop!
-        resolve(); 
+        limparListeners("ESPACO_LIVRE");
       }
     };
 
+    const acordar = () => {
+      console.log("Seek detectado, acordando loop a força.");
+      limparListeners("SEEK_DETECTADO");
+    }
+
+    const limparListeners = (motivo) => {
+      videoElement.removeEventListener('timeupdate', checarEstoque);
+      videoElement.removeEventListener('seeking', acordar);
+      resolve(motivo); // Destrava o seu loop while!
+    }
+
     // 3. Atrela a função ao evento de tempo do player
     videoElement.addEventListener('timeupdate', checarEstoque);
+    videoElement.addEventListener('seeking', acordar);
   });
 }
 
@@ -246,6 +471,17 @@ async function injetarComSeguranca(bufferDoCanal, dados) {
   });
 }
 
+// Baixa um pedaço em formato binário e injeta no SourceBuffer
+async function fetchAndAppend(url, targetBuffer) {
+  const res = await fetch(url);
+  const buffer = await res.arrayBuffer();
+
+  return new Promise((resolve) => {
+    targetBuffer.addEventListener('updateend', resolve, { once: true });
+    targetBuffer.appendBuffer(buffer);
+  });
+}
+
 async function iniciarStreaming() {
   try {
 
@@ -265,120 +501,40 @@ async function iniciarStreaming() {
     await extraiInformacoesManifesto();
     console.log("foi a extracao");
 
-    // 1. Inicia o MediaSource e vincula à tag de vídeo
-    const mediaSource = new MediaSource();
-    videoPlayer.value.src = URL.createObjectURL(mediaSource);
+    videoPlayer.value.addEventListener('seeking', async() => {
+        const tempo = videoPlayer.value.currentTime;
+        console.log(`usuario clicou em ${tempo} segundos`);
 
-    // Só podemos começar a injetar coisas quando o source estiver aberto
-    mediaSource.addEventListener('sourceopen', async () => {
+        const novoChunk = Math.floor(tempo / tamanhoSegmentos) + 1;
 
-      // Defini o tempo total do video
-      mediaSource.duration = tamanhoVideoTotal;
+        if (!tempoJaEstaBaixado(tempo, videoBuffer, novoChunk)) {
+          console.log(`O tempo ${tempo}s não está na memória. Pulando o download para o Chunk ${novoChunk}`);
+          chunkAtual = novoChunk;
 
-      // Criando os buffers de video e audio
-      const videoBuffer = mediaSource.addSourceBuffer(`${videoMimeType}; codecs="${videoCodecs}"`);
-      const audioBuffer = mediaSource.addSourceBuffer(`${audioMimeType}; codecs="${audioCodecs}"`);
+          promessaDeLimpeza = Promise.all([
+            limparBufferSeguro(videoBuffer, tamanhoVideoTotal),
+            limparBufferSeguro(audioBuffer, tamanhoVideoTotal)
+          ]);
+          
+          // 2. Espera a faxina terminar
+          await promessaDeLimpeza;
+          
+          // 3. Limpa a variável para avisar que a faxina acabou!
+          promessaDeLimpeza = null;
 
-      // Função Mágica: Baixa um pedaço em formato binário e espera o buffer engolir
-      const fetchAndAppend = async (url, targetBuffer) => {
-        const res = await fetch(url);
-        const buffer = await res.arrayBuffer(); // Pega o binário (ArrayBuffer)
+          if (!loopAtivo) {
+            console.log("Ressuscitando o loop de chunks para processar o retrocesso...");
+            rodarGerenciadorDeChunks();
+          }
 
-        return new Promise((resolve) => {
-          // Só resolve a promessa quando o buffer gritar "terminei de atualizar!"
-          targetBuffer.addEventListener('updateend', resolve, { once: true });
-          targetBuffer.appendBuffer(buffer);
-        });
-      };
-
-      // 5. Baixa e Injeta o Cabeçalho (Init) - Obrigatório antes dos chunks!
-      // Substitui a variavel $RepresentationID$ pelo ID real
-      let videoInitUrl = videoInitTemplate.replace('$RepresentationID$', videoRepId);
-      const audioInitUrl = audioInitTemplate.replace('$RepresentationID$', audioRepId);
-
-
-      console.log("Baixando inits...");
-
-      // Promisse para baixar os dois ao mesmo tempo
-      await Promise.all([
-        fetchAndAppend(videosBaseUrl + videoInitUrl, videoBuffer),
-        fetchAndAppend(videosBaseUrl + audioInitUrl, audioBuffer)
-      ]);
-
-      // 6. O famoso Loop de Chunks (Exemplo: buscando os 5 primeiros pedaços)
-      
-      // for (let i = 1; i <= quantidadeDeChunks; i++, chunkAtual++) {
-      while(chunkAtual <= quantidadeDeChunks){
-        let i = chunkAtual;
-        // Monta o nome do arquivo substituindo as variaveis dinâmicas do XML
-        // Dependendo de como você gerou no FFmpeg, o $Number$ pode ser $Number%05d$ (com zeros). 
-        // Adapte o replace abaixo se necessário.
-        let videoChunkUrl = videoMediaTemplate
-                              .replace('$RepresentationID$', videoRepId)
-                              .replace('$Number$', i);
-
-        let audioChunkUrl = audioMediaTemplate
-                              .replace('$RepresentationID$', audioRepId)
-                              .replace('$Number$', i);
-
-        await aguardarEspacoNoBuffer(videoPlayer.value, videoBuffer, 5);
-
-        console.log(`Baixando pedaço ${i}...`);
-        
-        // O "await" aqui é crucial. Ele garante que não vamos atropelar o buffer.
-        // await fetchAndAppend(videosBaseUrl + videoChunkUrl, videoBuffer);
-
-        // await Promise.all([
-        //   fetchAndAppend(videosBaseUrl + videoChunkUrl, videoBuffer),
-        //   fetchAndAppend(videosBaseUrl + audioChunkUrl, audioBuffer)
-        // ]);
-
-        let [resultadoVideo, resultadoAudio] = await Promise.all([
-          baixarECalcularBanda(videosBaseUrl + videoChunkUrl),
-          baixarECalcularBanda(videosBaseUrl + audioChunkUrl)
-        ]);
-
-        // Exibe a banda calculada no console
-        console.log(`Banda do Vídeo: ${resultadoVideo.kbps.toFixed(2)} Kbps`);
-        console.log(`Banda do Áudio: ${resultadoAudio.kbps.toFixed(2)} Kbps`);
-
-        // Manipulacoes para a qualidade sobre demanda
-        historicoBanda[tamanhoBufferBanda] = resultadoVideo.kbps;
-        tamanhoBufferBanda++;
-
-        // Aqui está a mágica da sincronia!
-        // Nós fazemos um "await" no vídeo ANTES do áudio. 
-        // Isso garante que o áudio não atropele o vídeo e jogue aquele erro no Firefox.
-        await injetarComSeguranca(videoBuffer, resultadoVideo.dados);
-        await injetarComSeguranca(audioBuffer, resultadoAudio.dados);
-              
-        console.log(`Pedaço ${i} injetado! (Video + Audio)`);
-
-        if(tamanhoBufferBanda > 3){
-          const mediaBanda = (historicoBanda[0] + historicoBanda[1] + historicoBanda[2]) / 3;
-          tamanhoBufferBanda = 0;
-          console.log("Media de banda atual:" + mediaBanda);
-
-          for(let i = qualidades.length ; i >= 0; i--){
-            //console.log("Qualidade: " + q); 
-            if(mediaBanda >= qualidades[i]){
-              if(videoRepId != i){
-                console.log("Setando qualidade " + i);
-                videoRepId = i;
-                videoInitUrl = videoInitTemplate.replace('$RepresentationID$', videoRepId);
-                fetchAndAppend(videosBaseUrl + videoInitUrl, videoBuffer);
-              }
-              break;
-            }
-          };
-
+        } else {
+          console.log("Tempo já está na memória! Nenhum download necessário.");
         }
-        chunkAtual++;
-      }
 
-      mediaSource.endOfStream();
-      console.log("Loop finalizado. Buffer carregado com sucesso!");
-    });
+      });
+
+      await criarMediaSource();
+      rodarGerenciadorDeChunks();
 
   } catch (error) {
     console.error("Falha ao buscar o manifesto ou injetar chunks:", error.message);
