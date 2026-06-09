@@ -193,7 +193,7 @@ async function rodarGerenciadorDeChunks() {
                           .replace('$RepresentationID$', audioRepId)
                           .replace('$Number$', i);
 
-    const motivo = await aguardarEspacoNoBuffer(videoPlayer.value, videoBuffer, 3);
+    const motivo = await aguardarEspacoNoBuffer(videoPlayer.value, videoBuffer, 10);
 
     if (motivo === "SEEK_DETECTADO") {
       console.log(`Seek detectado durante o download. Abortando avanço do chunk ${i}. O próximo será ${chunkAtual}.`);
