@@ -7,8 +7,10 @@ import CarouselItem from './components/ui/carousel/CarouselItem.vue';
 import CarouselNext from './components/ui/carousel/CarouselNext.vue';
 import CarouselPrevious from './components/ui/carousel/CarouselPrevious.vue';
 
-  const urlCatalogo = "http://172.21.28.223:8050/catalogo";
-  const urlVideos = "http://172.21.28.223:8080/"
+  const ipDoServidor = window.location.hostname;
+  const urlCatalogo = `http://${ipDoServidor}:8050/catalogo`;
+  const urlVideos = `http://${ipDoServidor}:8080/`
+
   const videos = ref([]);
 
   async function buscarCatalogo(){
