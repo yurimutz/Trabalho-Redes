@@ -7,8 +7,10 @@ import CarouselItem from './components/ui/carousel/CarouselItem.vue';
 import CarouselNext from './components/ui/carousel/CarouselNext.vue';
 import CarouselPrevious from './components/ui/carousel/CarouselPrevious.vue';
 
-  const urlCatalogo = "http://localhost:8050/catalogo";
-  const urlVideos = "http://localhost:8080/"
+  const ipDoServidor = window.location.hostname;
+  const urlCatalogo = `http://${ipDoServidor}:8050/catalogo`;
+  const urlVideos = `http://${ipDoServidor}:8080/`
+
   const videos = ref([]);
 
   async function buscarCatalogo(){
@@ -39,21 +41,21 @@ import CarouselPrevious from './components/ui/carousel/CarouselPrevious.vue';
     <h1 class="scroll-m-20 text-4xl font-extrabold tracking-tight text-balance">Catálogo</h1>
 
     <Carousel 
-      class="relative pt-8"
+      class="w-9/10 relative pt-8 ml-5 lg:ml-10"
       :opts="{
-        align: 'start',
+        align: 'center',
       }"
       >
       <CarouselContent>
         <CarouselItem 
           v-for="video in videos" 
           :key="video.nome" 
-          class="basis 1 sm:basis-1/2 lg:basis-1/3">
+          class="sm:basis-1/2 lg:basis-1/3 px-2">
         <div class="p1 w-full flex flex-col items-center">
           <!-- <Card> -->
             <!-- <CardContent class="flex flex-col items-center justify-center p-0"> -->
               <!-- <span class="text-3xl font-semibold">{{ i }}</span> -->
-               <div v-if="video.thumbnail" class="w-full overflow-hidden rounded-md">
+               <div v-if="video.thumbnail" class="w-full overflow-hidden rounded-md drop-shadow-lg">
                 <router-link :to="{ path: '/player', query : { m: video.manifesto } }">
                   <img
                     :src="`${urlVideos + video.thumbnail}`"
@@ -64,7 +66,7 @@ import CarouselPrevious from './components/ui/carousel/CarouselPrevious.vue';
                </div>
               <div
                 v-else
-                class="w-full aspect-video bg-muted flex items-center justify-center rounded-md"
+                class="w-full aspect-video bg-muted flex items-center justify-center rounded-md drop-shadow-md"
               >
                 <span class="text-muted-foreground text-sm">sem thumbnail</span>
               </div>

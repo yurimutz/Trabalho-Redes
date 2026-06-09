@@ -15,7 +15,7 @@ type VideoInfo struct {
 }
 
 func CatalogoAgregadoHandler(w http.ResponseWriter, r *http.Request) {
-	// Lista de URLs internas dos seus backends dentro da rede do Docker
+	// 1. Lista de URLs internas dos seus backends dentro da rede do Docker
 	backends := []string{
 		"http://go_origin_1:8080/catalogo",
 		"http://go_origin_2:8080/catalogo",
@@ -28,10 +28,10 @@ func CatalogoAgregadoHandler(w http.ResponseWriter, r *http.Request) {
 	// Criamos um cliente HTTP com Timeout para o agregador não ficar travado se um backend cair
 	client := &http.Client{Timeout: 3 * time.Second}
 
-	// Dispara uma Goroutine para cada backend em paralelo
+	// 2. Dispara uma Goroutine para cada backend em paralelo
 	for _, url := range backends {
 		wg.Add(1)
-
+		
 		go func(targetURL string) {
 			defer wg.Done()
 
@@ -56,10 +56,10 @@ func CatalogoAgregadoHandler(w http.ResponseWriter, r *http.Request) {
 		}(url)
 	}
 
-	// Aguarda todas as Goroutines terminarem
+	// 3. Aguarda todas as Goroutines terminarem
 	wg.Wait()
 
-	// Devolve o JSON unificado para o Nginx/Vue
+	// 4. Devolve o JSON unificado para o Nginx/Vue
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*") // CORS de segurança
 	json.NewEncoder(w).Encode(listaUnificada)
