@@ -328,7 +328,15 @@ function calcularChunksNoBuffer(videoElement, videoBuffer) {
 
 async function logicaABR(){
   if (tamanhoBufferBanda > 2) {
-        const mediaBanda = (historicoBanda[0] + historicoBanda[1] + historicoBanda[2]) / 3;
+
+        // Variaveis para ajudar em possiveis mudancas
+        const pesoRecente = 5;
+        const pesoMeio = 3;
+        const pesoAntigo = 2;
+        const somaPesos = 10;
+
+        // Media ponderada valorizando o chunk mais recente
+        const mediaBanda = ((historicoBanda[0]*pesoAntigo) + (historicoBanda[1]*pesoMeio) + (historicoBanda[2]*pesoRecente)) / somaPesos;
         tamanhoBufferBanda = 0;
         console.log("Media de banda atual:" + mediaBanda);
 
