@@ -29,8 +29,7 @@ Em vez de transferir um arquivo de mídia monolítico, a aplicação fragmenta o
 ### Requisitos
 * **Docker** e **Docker Compose** instalados na sua máquina.
 
-> **Nota:** Você só precisa ter o Docker instalado! Todas as linguagens, dependências e servidores (Node.js/Vite para o cliente, Go para a API do catálogo e Nginx para os vídeos) já estão empacotados e rodam de forma totalmente isolada dentro dos contêineres.
-> **Nota:** A aplicação foi arquitetada utilizando o padrão de microsserviços e está 100% conteinerizada. Não é necessário ter Node.js, Go, Nginx ou qualquer outra dependência instalada localmente no seu sistema operacional. O Docker orquestrará todo o ecossistema distribuído.s
+> **Nota:** A aplicação foi arquitetada utilizando o padrão de microsserviços e está 100% conteinerizada. Não é necessário ter Node.js, Go, Nginx ou qualquer outra dependência instalada localmente no seu sistema operacional. O Docker orquestrará todo o ecossistema distribuído.
 
 ### Instruções de Execução
 
@@ -48,7 +47,7 @@ docker-compose up -d --build
 **3. Acesse e teste a aplicação:**
 
 * **Acesso Local (na mesma máquina):** Abra o seu navegador e acesse `http://localhost:3000`.
-* **Acesso Distribuído (em outro dispositivo da rede):** Descubra o IP local do computador onde o Docker está rodando (ex: `192.168.0.15`). Pegue o seu celular ou outro PC conectado ao mesmo Wi-Fi e acesse `http://192.168.0.15:3000`. O cliente fará a descoberta dinâmica do IP e buscar os vídeos no Nginx perfeitamente!
+* **Acesso Distribuído (em outro dispositivo da rede):** Descubra o IP local do computador onde o Docker está rodando (ex: `192.168.0.15`). Pegue o seu celular ou outro PC conectado ao mesmo Wi-Fi e acesse `http://192.168.0.15:3000`. O cliente fará a descoberta dinâmica do IP e buscar os vídeos no Nginx perfeitamente.
 
 ## - Funcionalidades Implementadas:
 
