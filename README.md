@@ -61,6 +61,7 @@ docker-compose up -d --build
 
 ## - Possíveis Melhorias Futuras:
 
+* **Migração de Armazenamento para Nuvem (AWS):** Desacoplar os arquivos de mídia da infraestrutura local, hospedando os manifestos e *chunks* `.m4s` em *buckets* do **Amazon S3** distribuídos via **Amazon CloudFront** (CDN Edge). Essa abordagem removeria a carga de I/O dos contêineres Nginx/Go, garantindo alta disponibilidade, escalabilidade elástica sob demanda e menor latência na entrega dos segmentos de vídeo para usuários em diferentes áreas geográficas.
 * **Algoritmos ABR Preditivos:** Substituir a atual média móvel empírica por heurísticas avançadas de otimização (como o algoritmo BOLA - *Buffer Occupancy based Lyapunov Algorithm*), que ponderam tanto a oscilação da rede quanto o nível de preenchimento atual da RAM para tomar decisões mais suaves.
 * **Cache em Camada Interceptadora (Service Workers):** Implementar um *Service Worker* para interceptar os `fetch` de rede e armazenar fragmentos já baixados no `Cache Storage` do navegador. Isso zeraria o custo de rede ao usuário realizar retrocessos (Seeks) na linha do tempo do vídeo.
 * **Sincronização Multi-Cliente (Watch Party):** Integração do reprodutor com um servidor de WebSockets para estabelecer comunicação bidirecional de baixa latência, permitindo que a reprodução, pausas e pulos no vídeo sejam sincronizados simultaneamente entre várias máquinas da rede local.
