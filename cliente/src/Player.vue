@@ -333,7 +333,7 @@ async function logicaABR(){
         const pesoRecente = 5;
         const pesoMeio = 3;
         const pesoAntigo = 2;
-        const somaPesos = 10;
+        const somaPesos = pesoAntigo + pesoMeio + pesoRecente;
 
         // Media ponderada valorizando o chunk mais recente
         const mediaBanda = ((historicoBanda[0]*pesoAntigo) + (historicoBanda[1]*pesoMeio) + (historicoBanda[2]*pesoRecente)) / somaPesos;
