@@ -455,7 +455,7 @@ async function iniciarStreaming() {
       return;
     }
 
-    manifestUrl = `http://localhost:8080/${mParam}`;
+    manifestUrl = `http://172.21.28.223:8080/${mParam}`;
 
     const ultimaBarra = manifestUrl.lastIndexOf('/');
     videosBaseUrl = manifestUrl.substring(0, ultimaBarra + 1);
