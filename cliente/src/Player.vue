@@ -47,7 +47,8 @@ let audioBuffer = null;
 // Dados para controlar o buffer do mediaSource
 let historicoBanda = [];
 let tamanhoBufferBanda = 0;
-let tamMaxBufferBanda = 5;
+let tamMaxTrava = 3;
+let travaABR = 0;
 
 let hist = [];
 let manifestUrl = "";
@@ -105,7 +106,7 @@ async function extraiInformacoesManifesto(){
       // Gambi para pegar todas as qualidades do manifesto
       let representationALL = videoSet.querySelectorAll('Representation');
       representationALL.forEach((rep) => {
-        qualidades.push((parseFloat(rep.getAttribute("bandwidth"))) / 10);
+        qualidades.push((parseFloat(rep.getAttribute("bandwidth"))) / 1000);
       });
 
       // Forca bruta mesmo pq nao to com criatividade para encontrar o 360p em um vetor generico
@@ -217,8 +218,13 @@ async function rodarGerenciadorDeChunks() {
     console.log(`Banda do Áudio: ${resultadoAudio.kbps.toFixed(2)} Kbps`);
 
     // Manipulações para a qualidade sob demanda
-    historicoBanda[tamanhoBufferBanda] = resultadoVideo.kbps;
-    tamanhoBufferBanda++;
+    // historicoBanda[tamanhoBufferBanda] = resultadoVideo.kbps;
+    // tamanhoBufferBanda++;
+
+    historicoBanda.push(resultadoVideo.kbps);
+    if (historicoBanda.length > 3) {
+      historicoBanda.shift(); 
+    }
 
     console.log("Historico de chunks atualizado: " + i);
     //hist.push(i);
@@ -252,6 +258,10 @@ async function rodarGerenciadorDeChunks() {
     //     }
     //   }
     // }
+
+    if(travaABR > 0){
+      travaABR--;
+    }
 
     chunkAtual++;
   }
@@ -327,7 +337,10 @@ function calcularChunksNoBuffer(videoElement, videoBuffer) {
 }
 
 async function logicaABR(){
-  if (tamanhoBufferBanda > 2) {
+  // if (tamanhoBufferBanda > 2) {
+  // Apos mudanca de qualidade, fica tamMaxTrava chunks(4 * tamMaxTrava segundos) travados a fim de estabilizar a rede
+  // Os 3 primeiros chunks, que inicializam o player estao protegidos, a fim de garantir uma inicializacao rapida
+  if(historicoBanda.length === 3 && (travaABR == 0)){
 
         // Variaveis para ajudar em possiveis mudancas
         const pesoRecente = 5;
@@ -337,13 +350,14 @@ async function logicaABR(){
 
         // Media ponderada valorizando o chunk mais recente
         const mediaBanda = ((historicoBanda[0]*pesoAntigo) + (historicoBanda[1]*pesoMeio) + (historicoBanda[2]*pesoRecente)) / somaPesos;
-        tamanhoBufferBanda = 0;
+        //tamanhoBufferBanda = 0;
         console.log("Media de banda atual:" + mediaBanda);
 
-        for (let j = qualidades.length; j >= 0; j--) {
+        for (let j = qualidades.length-1; j >= 0; j--) {
           if (mediaBanda >= qualidades[j]) {
             if (videoRepId != j) {
               console.log("Setando qualidade " + j);
+              travaABR = tamMaxTrava;
               videoRepId = j;
               videoInitUrl = videoInitTemplate.replace('$RepresentationID$', videoRepId);
               await fetchAndAppend(videosBaseUrl + videoInitUrl, videoBuffer);
