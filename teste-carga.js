@@ -13,17 +13,17 @@ const HOSTNAME = __ENV.HOSTNAME || 'localhost';
 
 export default function () {
     // PASSO 1: O utilizador abre o site e pede o Catálogo
-    let resCatalogo = http.get('http://192.168.100.111:8050/catalogo');
+    let resCatalogo = http.get(`http://${HOSTNAME}:8050/catalogo`);
 
     check(resCatalogo, {
         'Catalogo carregou com sucesso': (r) => r.status === 200,
     });
 
     // O utilizador demora 2 segundos a olhar para o catálogo
-    sleep(2);t
+    sleep(2);
 
     // PASSO 2: O utilizador dá Play num vídeo!
-    let resManifesto = http.get('http://192.168.100.111:8080/videos/Santi Cazorla, quando futebol vira arte./manifesto.mpd');
+    let resManifesto = http.get(`http://${HOSTNAME}:8080/videos/lol/manifesto.mpd`);
 
     check(resManifesto, {
         'Manifesto baixado': (r) => r.status === 200,
@@ -32,9 +32,9 @@ export default function () {
     // PASSO 3: O reprodutor (DASH) pede 10 pedaços de vídeo
     for (let i = 1; i <= 10; i++) {
         // Monta o nome do chunk dinamicamente (ex: slice_0_1.m4s, slice_0_2.m4s)
-        let pedaco = `chunk_1_${i}.m4s`;
+        let pedaco = `slice_3_${i}.m4s`;
 
-        let resChunk = http.get(`http://192.168.100.111:8080/videos/Santi Cazorla, quando futebol vira arte./${pedaco}`);
+        let resChunk = http.get(`http://${HOSTNAME}:8080/videos/lol/${pedaco}`);
 
         check(resChunk, {
             'Pedaco baixado': (r) => r.status === 200 || r.status === 206,
@@ -44,9 +44,9 @@ export default function () {
     }
     for (let i = 1; i <= 5; i++) {
         sleep(4);
-        let pedaco = `chunk_1_${i}.m4s`;
+        let pedaco = `slice_3_${i}.m4s`;
 
-        let resChunk = http.get(`http://192.168.100.111:8080/videos/Santi Cazorla, quando futebol vira arte./${pedaco}`);
+        let resChunk = http.get(`http://${HOSTNAME}:8080/videos/lol/${pedaco}`);
 
         check(resChunk, {
             'Pedaco baixado': (r) => r.status === 200 || r.status === 206,
