@@ -202,11 +202,14 @@ async function rodarGerenciadorDeChunks() {
     }
 
     console.log(`Baixando pedaço ${i}...`);
+    // let resultadoVideo;
+    // let resultadoAudio;
 
-    let [resultadoVideo, resultadoAudio] = await Promise.all([
-      baixarECalcularBanda(videosBaseUrl + videoChunkUrl),
-      baixarECalcularBanda(videosBaseUrl + audioChunkUrl)
-    ]);
+    try{
+      let [resultadoVideo, resultadoAudio] = await Promise.all([
+        baixarECalcularBanda(videosBaseUrl + videoChunkUrl),
+        baixarECalcularBanda(videosBaseUrl + audioChunkUrl)
+      ]);
 
     if (i !== chunkAtual) {
       console.log(`[Defesa] Download do chunk ${i} descartado. O seek alterou a rota para ${chunkAtual}.`);
@@ -262,8 +265,14 @@ async function rodarGerenciadorDeChunks() {
     if(travaABR > 0){
       travaABR--;
     }
-
     chunkAtual++;
+
+    } catch {
+      console.log("Sem conexao com a internet");
+      await new Promise(resolve => setTimeout(resolve, 4000));
+      continue;
+    }
+
   }
 
   // FINAL DO VÍDEO NATURAL
