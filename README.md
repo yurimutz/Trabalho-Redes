@@ -39,12 +39,16 @@ git clone https://github.com/yurimutz/Trabalho-Redes
 cd Trabalho-Redes
 ```
 
-**2. Suba a infraestrutura completa:**
+**2. Baixe os vídeos no google drive e coloque em alguma pasta /backend-go/meus_videos_gerados/**
+
+Baixe alguma pasta no nosso [drive](https://drive.google.com/drive/folders/1XSEbc1bFzPdTcYb6lm6S2ObyCjd7v4ch?usp=sharing) como exemplo de vídeo e adicione em umas das pastas /meus_videos_gerados/ do Servidor. 
+
+**3. Suba a infraestrutura completa:**
 ```bash
 docker-compose up -d --build
 ```
 
-**3. Acesse e teste a aplicação:**
+**4. Acesse e teste a aplicação:**
 
 * **Acesso Local (na mesma máquina):** Abra o seu navegador e acesse `http://localhost:3000`.
 * **Acesso Distribuído (em outro dispositivo da rede):** Descubra o IP local do computador onde o Docker está rodando (ex: `192.168.0.15`). Pegue o seu celular ou outro PC conectado ao mesmo Wi-Fi e acesse `http://192.168.0.15:3000`. O cliente fará a descoberta dinâmica do IP e buscar os vídeos no Nginx perfeitamente.
