@@ -202,11 +202,14 @@ async function rodarGerenciadorDeChunks() {
     }
 
     console.log(`Baixando pedaço ${i}...`);
+    // let resultadoVideo;
+    // let resultadoAudio;
 
-    let [resultadoVideo, resultadoAudio] = await Promise.all([
-      baixarECalcularBanda(videosBaseUrl + videoChunkUrl),
-      baixarECalcularBanda(videosBaseUrl + audioChunkUrl)
-    ]);
+    try{
+      let [resultadoVideo, resultadoAudio] = await Promise.all([
+        baixarECalcularBanda(videosBaseUrl + videoChunkUrl),
+        baixarECalcularBanda(videosBaseUrl + audioChunkUrl)
+      ]);
 
     if (i !== chunkAtual) {
       console.log(`[Defesa] Download do chunk ${i} descartado. O seek alterou a rota para ${chunkAtual}.`);
@@ -262,8 +265,14 @@ async function rodarGerenciadorDeChunks() {
     if(travaABR > 0){
       travaABR--;
     }
-
     chunkAtual++;
+
+    } catch {
+      console.log("Sem conexao com a internet");
+      await new Promise(resolve => setTimeout(resolve, 4000));
+      continue;
+    }
+
   }
 
   // FINAL DO VÍDEO NATURAL
@@ -340,7 +349,7 @@ async function logicaABR(){
   // if (tamanhoBufferBanda > 2) {
   // Apos mudanca de qualidade, fica tamMaxTrava chunks(4 * tamMaxTrava segundos) travados a fim de estabilizar a rede
   // Os 3 primeiros chunks, que inicializam o player estao protegidos, a fim de garantir uma inicializacao rapida
-  if(historicoBanda.length === 3 && (travaABR == 0)){
+  if(historicoBanda.length === 3){
 
         // Variaveis para ajudar em possiveis mudancas
         const pesoRecente = 5;
@@ -349,22 +358,37 @@ async function logicaABR(){
         const somaPesos = pesoAntigo + pesoMeio + pesoRecente;
 
         // Media ponderada valorizando o chunk mais recente
-        const mediaBanda = ((historicoBanda[0]*pesoAntigo) + (historicoBanda[1]*pesoMeio) + (historicoBanda[2]*pesoRecente)) / somaPesos;
+        let mediaBanda = ((historicoBanda[0]*pesoAntigo) + (historicoBanda[1]*pesoMeio) + (historicoBanda[2]*pesoRecente)) / somaPesos;
         //tamanhoBufferBanda = 0;
+        mediaBanda = mediaBanda * 0.8;
         console.log("Media de banda atual:" + mediaBanda);
 
         for (let j = qualidades.length-1; j >= 0; j--) {
           if (mediaBanda >= qualidades[j]) {
-            if (videoRepId != j) {
-              console.log("Setando qualidade " + j);
+            if (videoRepId < j && (travaABR == 0)) {
+              console.log("Subindo qualidade " + j);
               travaABR = tamMaxTrava;
               videoRepId = j;
               videoInitUrl = videoInitTemplate.replace('$RepresentationID$', videoRepId);
               await fetchAndAppend(videosBaseUrl + videoInitUrl, videoBuffer);
-            } else {
-              console.log(`Qualidade ${j} mantida`);
+              break;
             }
-            break;
+            // } else {
+            //   console.log(`Qualidade ${j} mantida`);
+            // }
+            if(videoRepId > j){
+              console.log("Qualidade desceu para a " + j);
+              travaABR = 0;
+              videoRepId = j;
+              videoInitUrl = videoInitTemplate.replace('$RepresentationID$', videoRepId);
+              await fetchAndAppend(videosBaseUrl + videoInitUrl, videoBuffer);
+              break;
+            }
+            if(videoRepId === j){
+              console.log(`Qualidade ${j} mantida`);
+              break;
+            }
+            //break;
           }
         }
       }
