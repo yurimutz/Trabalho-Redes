@@ -73,7 +73,7 @@ docker-compose up -d --build
 
 ## Documentação Técnica do Projeto de Streaming (MPEG-DASH)
 
-Documento técnico completo que detalha toda a infraestrutura, decisões de engenharia de software, modelos matemáticos e otimizações implementadas no ecossistema (Front-end em Vue.js, Nginx, Docker, Go e FFmpeg).
+[Documento técnico completo](https://docs.google.com/document/d/1QUjHTMgjOohzHSKjX0cYPM2_ZNK2zHDnzb9qQkSaupI/edit?usp=sharing) que detalha toda a infraestrutura, decisões de engenharia de software, modelos matemáticos e otimizações implementadas no ecossistema (Front-end em Vue.js, Nginx, Docker, Go e FFmpeg).
 
 ### Principais Tópicos Abordados no Documento
 
@@ -82,5 +82,3 @@ Documento técnico completo que detalha toda a infraestrutura, decisões de enge
 3. **Algoritmo de Adaptive Bitrate (ABR) Avançado:** Heurística empírica de transição de qualidade utilizando média ponderada (pesos 5-3-2), o mecanismo de janela deslizante real com fila rotativa contínua (`push` e `shift`) e a **Trava de Inércia Direcional (Cooldown)** com lógica assimétrica para mitigar o Efeito Ping-Pong.
 4. **Concorrência e Segurança de I/O:** Implementação de travas lógicas (semáforos assíncronos) baseadas no evento nativo `updateend` da API *Media Source Extensions* (MSE) para blindar o sistema contra Condições de Corrida (*Race Conditions*) durante o *seeking*.
 5. **Processamento Offline e Transcodificação (FFmpeg):** O comando completo de transcodificação com múltiplas saídas dissecado bloco a bloco, detalhando os filtros de imagem (`scale`, `pad`, `setsar`), a sincronia perfeita de fragmentos (`force_key_frames`) e a estruturação da *Bitrate Ladder* (200k, 800k, 3000k, 6000k).
-
-[Clique para acessar](https://docs.google.com/document/d/1QUjHTMgjOohzHSKjX0cYPM2_ZNK2zHDnzb9qQkSaupI/edit?usp=sharing)
